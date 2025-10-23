@@ -84,4 +84,32 @@ impl Cpu {
     fn get_flag_s(&self) -> bool {
         (self.f & 0x80) != 0
     }
+
+    // == Flag pair helper functions == //
+    fn bc(&self) -> u16 {
+        ((self.b as u16) << 8) | (self.c as u16)
+    }
+
+    fn set_bc(&mut self, val: u16) {
+        self.b = (val >> 8) as u8;
+        self.c = val as u8;
+    }
+
+    fn de(&self) -> u16 {
+        ((self.d as u16) << 8) | (self.e as u16)
+    }
+
+    fn set_de(&mut self, val: u16) {
+        self.d = (val >> 8) as u8;
+        self.e = val as u8;
+    }
+
+    fn hl(&self) -> u16 {
+        ((self.h as u16) << 8) | (self.l as u16)
+    }
+
+    fn set_hl(&mut self, val: u16) {
+        self.h = (val >> 8) as u8;
+        self.l = val as u8;
+    }
 }

@@ -12,6 +12,10 @@ impl Cpu {
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x3E => self.ld_r_n(opcode, memory),
             // INC r pattern opcode
             0x04 | 0x0C | 0x14 | 0x1C | 0x24 | 0x2C | 0x3C => self.inc_r(opcode),
+            // INC rr pattern opcode
+            0x03 | 0x13 | 0x23 | 0x33 => self.inc_rr(opcode),
+            0x34 => self.inc_hl_indirect(memory),
+            // !TODO: Work on DEC instructions next (similar setup to inc instructions)
             // Jump
             0xC3 => self.jp_nn(memory),
             _ => {
@@ -74,6 +78,32 @@ impl Cpu {
         self.set_flag_y((new_val & 0x08) != 0);
 
         4
+    }
+    fn inc_rr(&mut self, opcode: u8) -> u8 {
+        match opcode {
+            0x03 => self.set_bc(self.bc().wrapping_add(1)),
+            0x13 => self.set_de(self.de().wrapping_add(1)),
+            0x23 => self.set_hl(self.hl().wrapping_add(1)),
+            0x33 => self.sp = self.sp.wrapping_add(1),
+            _ => unreachable!("Invalid INC rr opcode: 0x{:02X}", opcode),
+        }
+        6
+    }
+    fn inc_hl_indirect(&mut self, memory: &mut Memory) -> u8 {
+        let addr = self.hl();
+        let old_val = memory.read(addr);
+        let new_val = old_val.wrapping_add(1);
+        memory.write(addr, new_val);
+
+        self.set_flag_n(false);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) == 0x0F);
+        self.set_flag_pv(old_val == 0x7F);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        11
     }
     fn jp_nn(&mut self, memory: &Memory) -> u8 {
         let addr = self.fetch_word(memory);
