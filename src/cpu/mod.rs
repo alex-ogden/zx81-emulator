@@ -93,6 +93,7 @@ impl Cpu {
         cycles
     }
     fn execute(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+        // execute_instruction is found in instructions.rs
         self.execute_instruction(opcode, memory)
     }
 }

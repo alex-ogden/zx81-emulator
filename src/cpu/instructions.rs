@@ -46,8 +46,31 @@ impl Cpu {
         }
         7
     }
-    // !TODO: Complete INC function
     fn inc_r(&mut self, opcode: u8) -> u8 {
+        // Logic is the same on all INC operations
+        let reg = match opcode {
+            0x04 => &mut self.b,
+            0x0C => &mut self.c,
+            0x14 => &mut self.d,
+            0x1C => &mut self.e,
+            0x24 => &mut self.h,
+            0x2C => &mut self.l,
+            0x3C => &mut self.a,
+            _ => panic!("Invalid INC r opcode: 0x{:02X}", opcode),
+        };
+
+        let old_val = *reg;
+        *reg = old_val.wrapping_add(1);
+        let new_val = *reg;
+
+        self.set_flag_n(false);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) == 0x0F);
+        self.set_flag_pv(old_val == 0x7F);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
         4
     }
     fn jp_nn(&mut self, memory: &Memory) -> u8 {
