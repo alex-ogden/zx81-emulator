@@ -1,3 +1,5 @@
+use crate::memory::Memory;
+
 pub struct Cpu {
     // Z80 CPU @ 3.25MHz
     // Registers
@@ -9,8 +11,12 @@ pub struct Cpu {
     pub e: u8,
     pub h: u8,
     pub l: u8,
+
+    // Stack pointer and program counter
     pub sp: u16,
     pub pc: u16,
+
+    // Holds whether the CPU is halted
     pub halted: bool,
 }
 
@@ -25,11 +31,27 @@ impl Cpu {
             e: 0,
             h: 0,
             l: 0,
+
             sp: 0xFFFF,
             pc: 0x0000,
+
             halted: false,
         }
     }
 
-    pub fn step(&mut self, mem: &mut Memory) -> u32 {}
+    fn fetch_byte(&mut self, memory: &Memory) -> u8 {
+        let addr = self.pc;
+        let byte = memory.read(addr);
+        self.pc.wrapping_add(1);
+        byte
+    }
+
+    fn fetch_word(&mut self, memory: &Memory) -> u16 {
+        let lo = self.fetch_byte(memory) as u16;
+        let hi = self.fetch_byte(memory) as u16;
+        (hi << 8) | lo
+    }
+
+    pub fn step(&mut self, memory: &mut Memory) -> u32 {}
+    fn execute(&mut self, opcode: u8, memory: &mut Memory) -> u8 {}
 }
