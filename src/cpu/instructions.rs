@@ -34,14 +34,16 @@ impl Cpu {
     }
     fn ld_r_n(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
         let val = self.fetch_byte(memory);
-        match (opcode >> 3) & 0x07 {
-            0b111 => self.a = val,
-            0b000 => self.b = val,
-            0b001 => self.c = val,
-            0b010 => self.d = val,
-            0b011 => self.e = val,
-            0b100 => self.h = val,
-            0b101 => self.l = val,
+        let reg = (opcode >> 3) & 0x07;
+        match reg {
+            7 => self.a = val,
+            6 => self.b = val,
+            5 => self.c = val,
+            4 => self.d = val,
+            3 => self.e = val,
+            2 => self.h = val,
+            1 => self.l = val,
+            6 => unreachable!("LD (HL), n is handled separately"),
             _ => unreachable!(),
         }
         7
