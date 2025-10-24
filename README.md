@@ -63,14 +63,14 @@ The Sinclair ZX81 was a revolutionary home computer released in 1981, bringing c
 
 ### Prerequisites
 
-- Rust 1.70+ (install from [rustup.rs](https://rustup.rs))
+- Rust (install from [rustup.rs](https://rustup.rs))
 - A ZX81 ROM file (8KB, usually named `zx81.rom`)
 
 ### Building
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/zx81-emulator.git
+git clone https://github.com/alex-ogden/zx81-emulator.git
 cd zx81-emulator
 
 # Build in release mode
