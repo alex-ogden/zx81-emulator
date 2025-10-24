@@ -9,7 +9,11 @@ impl Cpu {
             0x00 => self.nop(),
             0x76 => self.halt(),
             // LD r, n pattern opcodes
-            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x3E => self.ld_r_n(opcode, memory),
+            0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.ld_r_n(opcode, memory),
+            // LD rr, nn pattern opcodes
+            0x01 | 0x11 | 0x21 | 0x31 => self.ld_rr_nn(opcode, memory),
+            // LD r, r' pattern opcodes
+            0x40..=0x7F => self.ld_r_r(opcode, memory),
             // INC r pattern opcode
             0x04 | 0x0C | 0x14 | 0x1C | 0x24 | 0x2C | 0x3C => self.inc_r(opcode),
             // INC rr pattern opcode
@@ -42,18 +46,38 @@ impl Cpu {
     fn ld_r_n(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
         let val = self.fetch_byte(memory);
         let reg = (opcode >> 3) & 0x07;
-        match reg {
-            7 => self.a = val,
-            6 => self.b = val,
-            5 => self.c = val,
-            4 => self.d = val,
-            3 => self.e = val,
-            2 => self.h = val,
-            1 => self.l = val,
-            6 => unreachable!("LD (HL), n is handled separately"),
-            _ => unreachable!(),
+        self.write_reg(reg, val, memory);
+
+        if reg == 6 {
+            10
+        } else {
+            7
         }
-        7
+    }
+    fn ld_rr_nn(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+        let val = self.fetch_word(memory);
+        match (opcode >> 4) & 0x03 {
+            0 => self.set_bc(val),
+            1 => self.set_de(val),
+            2 => self.set_hl(val),
+            3 => self.sp = val,
+            _ => panic!("Invalid LD rr nn opcode: 0x{:02X}", opcode),
+        }
+        10
+    }
+    fn ld_r_r(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+        let src_code = opcode & 0x07;
+        let dest_code = (opcode >> 3) & 0x07;
+        let val = self.read_reg(src_code, memory);
+        self.write_reg(dest_code, val, memory);
+
+        if src_code == 6 || dest_code == 6 {
+            // Memory operations take 7 cycles
+            7
+        } else {
+            // Reg -> Reg operations take 4 cycles
+            4
+        }
     }
     fn inc_r(&mut self, opcode: u8) -> u8 {
         // Logic is the same on all INC operations
@@ -136,10 +160,10 @@ impl Cpu {
     }
     fn dec_rr(&mut self, opcode: u8) -> u8 {
         match opcode {
-            0x03 => self.set_bc(self.bc().wrapping_sub(1)),
-            0x13 => self.set_de(self.de().wrapping_sub(1)),
-            0x23 => self.set_hl(self.hl().wrapping_sub(1)),
-            0x33 => self.sp = self.sp.wrapping_sub(1),
+            0x0B => self.set_bc(self.bc().wrapping_sub(1)),
+            0x1B => self.set_de(self.de().wrapping_sub(1)),
+            0x2B => self.set_hl(self.hl().wrapping_sub(1)),
+            0x3B => self.sp = self.sp.wrapping_sub(1),
             _ => unreachable!("Invalid DEC rr opcode: 0x{:02X}", opcode),
         }
         6

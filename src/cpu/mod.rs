@@ -1,3 +1,18 @@
+
+
+//! Z80 CPU implementation
+//!
+//! This module implements the Zilog Z80 CPU core used in the ZX81.
+//! The Z80 is an 8-bit microprocessor with a 16-bit address bus.
+//!
+//! ## Features
+//!
+//! - Full register set (A, F, B, C, D, E, H, L, IX, IY, SP, PC)
+//! - Shadow registers (AF', BC', DE', HL')
+//! - 8 flags (S, Z, Y, H, X, P/V, N, C) including undocumented X and Y
+//! - Cycle-accurate instruction timing
+//! - Pattern-based instruction decoding
+
 use crate::memory::Memory;
 
 mod cb_instructions;
@@ -7,6 +22,32 @@ mod fd_instructions;
 mod instructions;
 mod registers;
 
+/// Z80 CPU state
+///
+/// Represents the complete state of the Z80 microprocessor, including
+/// all registers, flags, and execution state.
+///
+/// ## Registers
+///
+/// The Z80 has several register sets:
+/// - **Main registers**: A (accumulator), F (flags), B, C, D, E, H, L
+/// - **Shadow registers**: AF', BC', DE', HL' (for fast context switching)
+/// - **Index registers**: IX, IY (16-bit addressing)
+/// - **Special registers**: I (interrupt vector), R (memory refresh)
+/// - **Pointers**: SP (stack pointer), PC (program counter)
+///
+/// ## Flags (in F register)
+///
+/// ```text
+/// Bit 7: S  - Sign flag
+/// Bit 6: Z  - Zero flag
+/// Bit 5: X  - Undocumented (copy of bit 5 of result)
+/// Bit 4: H  - Half-carry flag
+/// Bit 3: Y  - Undocumented (copy of bit 3 of result)
+/// Bit 2: P/V - Parity/Overflow flag
+/// Bit 1: N  - Add/Subtract flag
+/// Bit 0: C  - Carry flag
+/// ```
 pub struct Cpu {
     // Z80 CPU @ 3.25MHz
     // Registers
@@ -40,6 +81,23 @@ pub struct Cpu {
 }
 
 impl Cpu {
+    /// Creates a new CPU with initialized state
+    ///
+    /// The CPU starts with:
+    /// - All registers set to 0
+    /// - Stack pointer at 0xFFFF
+    /// - Program counter at 0x0000
+    /// - Not halted
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zx81_emulator::cpu::Cpu;
+    ///
+    /// let cpu = Cpu::new();
+    /// assert_eq!(cpu.pc, 0x0000);
+    /// assert_eq!(cpu.sp, 0xFFFF);
+    /// ```
     pub fn new() -> Self {
         Self {
             a: 0,
@@ -79,6 +137,28 @@ impl Cpu {
         (hi << 8) | lo
     }
 
+    /// Executes a single instruction
+    ///
+    /// Fetches the next instruction from memory at PC, executes it,
+    /// and returns the number of T-cycles consumed.
+    ///
+    /// # Arguments
+    ///
+    /// * `memory` - Reference to the memory system
+    ///
+    /// # Returns
+    ///
+    /// Number of T-cycles (clock cycles) consumed by the instruction
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zx81_emulator::{cpu::Cpu, memory::Memory};
+    ///
+    /// let mut cpu = Cpu::new();
+    /// let mut memory = Memory::new(vec![0; 0x2000]);
+    /// let cycles = cpu.step(&mut memory);
+    /// ```
     pub fn step(&mut self, memory: &mut Memory) -> u8 {
         // Is the system halted?
         if self.is_halted {

@@ -2,5 +2,11 @@
 name = "zx81-emulator"
 version = "0.1.0"
 edition = "2024"
+authors = ["Alex Ogden"]
+description = "A cycle-accurate Sinclair ZX81 emulator"
+repository = "https://github.com/alex-ogden/zx81-emulator"
+license = "MIT"
+keywords = ["zx81", "emulator", "z80", "retro", "sinclair"]
+categories = ["emulators", "games"]
 
 [dependencies]

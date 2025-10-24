@@ -1,14 +1,33 @@
+//! Memory management subsystem
+//!
+//! Handles the ZX81's memory layout with ROM and RAM regions.
+//!
+//! ## Memory Map
+//!
+//! ```text
+//! 0x0000 - 0x1FFF  (8KB)   ROM - BASIC interpreter and system routines
+//! 0x2000 - 0x3FFF          Unused (mirror/expansion)
+//! 0x4000 - 0x43FF  (1KB)   RAM - Base system RAM
+//! 0x4400 - 0x7FFF          RAM - Expansion (if installed)
+//! ```
+
 mod ram;
 mod rom;
 
 pub use rom::load_rom;
 
+/// ZX81 Memory system
+///
+/// Manages ROM and RAM with correct address decoding for the ZX81.
 pub struct Memory {
     rom: Vec<u8>,
     ram: Vec<u8>,
 }
 
 impl Memory {
+    /// Creates a new memory system with the provided ROM
+    ///
+    /// Initializes with 1KB base RAM at 0x4000.
     pub fn new(rom: Vec<u8>) -> Self {
         Self {
             rom,
@@ -16,6 +35,9 @@ impl Memory {
         }
     }
 
+    /// Reads a byte from memory
+    ///
+    /// Returns 0xFF for out-of-bounds RAM addresses.
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x1FFF => self.rom[addr as usize],
@@ -31,6 +53,9 @@ impl Memory {
         }
     }
 
+    /// Writes a byte to memory
+    ///
+    /// ROM writes and out-of-bounds RAM writes are silently ignored.
     pub fn write(&mut self, addr: u16, val: u8) {
         match addr {
             0x0000..=0x1FFF => {} // ROM is not writable

@@ -1,4 +1,5 @@
 use super::Cpu;
+use crate::memory::Memory;
 
 // Register and flag helper methods
 impl Cpu {
@@ -111,5 +112,34 @@ impl Cpu {
     pub fn set_hl(&mut self, val: u16) {
         self.h = (val >> 8) as u8;
         self.l = val as u8;
+    }
+
+    // == Read & Write to registers == //
+    pub fn read_reg(&self, reg_code: u8, memory: &Memory) -> u8 {
+        match reg_code {
+            0 => self.b,
+            1 => self.c,
+            2 => self.d,
+            3 => self.e,
+            4 => self.h,
+            5 => self.l,
+            6 => memory.read(self.hl()), // Memory - special case
+            7 => self.a,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn write_reg(&mut self, reg_code: u8, val: u8, memory: &mut Memory) {
+        match reg_code {
+            0 => self.b = val,
+            1 => self.c = val,
+            2 => self.d = val,
+            3 => self.e = val,
+            4 => self.h = val,
+            5 => self.l = val,
+            6 => memory.write(self.hl(), val), // Memory - special case
+            7 => self.a = val,
+            _ => unreachable!(),
+        }
     }
 }
