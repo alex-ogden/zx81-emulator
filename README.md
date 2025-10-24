@@ -259,8 +259,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤖 AI usage
 
-- AI has been used in this project to generate documentation (including this README you're reading now!)
-- I have used AI as a research tool for learning about the ZX81 and keeping track of where I'm up to with implementation
+- AI has been used in this project to generate and update documentation (including this README you're reading now!)
+- AI has been used as a research tool for learning about the ZX81, summarising large data sheets, and keeping track of where I'm up to with implementation
 - AI has not been used to implement core functionality.
 ---
 
