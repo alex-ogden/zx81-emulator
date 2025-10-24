@@ -15,7 +15,10 @@ impl Cpu {
             // INC rr pattern opcode
             0x03 | 0x13 | 0x23 | 0x33 => self.inc_rr(opcode),
             0x34 => self.inc_hl_indirect(memory),
-            // !TODO: Work on DEC instructions next (similar setup to inc instructions)
+            0x05 | 0x15 | 0x25 | 0x0D | 0x1D | 0x2D | 0x3D => self.dec_r(opcode),
+            0x0B | 0x1B | 0x2B | 0x3B => self.dec_rr(opcode),
+            0x35 => self.dec_hl_indirect(memory),
+            0x10 => self.dec_jnz_d(memory),
             // Jump
             0xC3 => self.jp_nn(memory),
             _ => {
@@ -104,6 +107,67 @@ impl Cpu {
         self.set_flag_y((new_val & 0x08) != 0);
 
         11
+    }
+    fn dec_r(&mut self, opcode: u8) -> u8 {
+        let reg = match opcode {
+            0x05 => &mut self.b,
+            0x0D => &mut self.c,
+            0x15 => &mut self.d,
+            0x1D => &mut self.e,
+            0x25 => &mut self.h,
+            0x2D => &mut self.l,
+            0x3D => &mut self.a,
+            _ => panic!("Invalid DEC r opcode: 0x{:02X}", opcode),
+        };
+
+        let old_val = *reg;
+        *reg = old_val.wrapping_sub(1);
+        let new_val = *reg;
+
+        self.set_flag_n(true);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) == 0x00);
+        self.set_flag_pv(old_val == 0x80);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        4
+    }
+    fn dec_rr(&mut self, opcode: u8) -> u8 {
+        match opcode {
+            0x03 => self.set_bc(self.bc().wrapping_sub(1)),
+            0x13 => self.set_de(self.de().wrapping_sub(1)),
+            0x23 => self.set_hl(self.hl().wrapping_sub(1)),
+            0x33 => self.sp = self.sp.wrapping_sub(1),
+            _ => unreachable!("Invalid DEC rr opcode: 0x{:02X}", opcode),
+        }
+        6
+    }
+    fn dec_hl_indirect(&mut self, memory: &mut Memory) -> u8 {
+        let addr = self.hl();
+        let old_val = memory.read(addr);
+        let new_val = old_val.wrapping_sub(1);
+        memory.write(addr, new_val);
+
+        self.set_flag_n(true);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) == 0x00);
+        self.set_flag_pv(old_val == 0x80);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        11
+    }
+    fn dec_jnz_d(&mut self, memory: &Memory) -> u8 {
+        let offset = self.fetch_byte(memory) as i8;
+        self.b = self.b.wrapping_sub(1);
+        if self.b != 0 {
+            self.pc = self.pc.wrapping_add(offset as i16 as u16);
+            return 13;
+        }
+        8
     }
     fn jp_nn(&mut self, memory: &Memory) -> u8 {
         let addr = self.fetch_word(memory);
