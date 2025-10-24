@@ -19,11 +19,17 @@ impl Cpu {
             // INC rr pattern opcode
             0x03 | 0x13 | 0x23 | 0x33 => self.inc_rr(opcode),
             0x34 => self.inc_hl_indirect(memory),
+            // DEC
             0x05 | 0x15 | 0x25 | 0x0D | 0x1D | 0x2D | 0x3D => self.dec_r(opcode),
             0x0B | 0x1B | 0x2B | 0x3B => self.dec_rr(opcode),
             0x35 => self.dec_hl_indirect(memory),
             0x10 => self.dec_jnz_d(memory),
-            // Jump
+            // !TODO: Add tests for ADD and SUB (and future ADC and SBC) opcodes
+            // ADD
+            0x80 | 0x81 | 0x82 | 0x83 | 0x84 | 0x85 | 0x86 | 0x87 => self.add_a_r(opcode, memory),
+            // SUB
+            0x90 | 0x91 | 0x92 | 0x93 | 0x94 | 0x95 | 0x96 | 0x97 => self.sub_a_r(opcode, memory),
+            // JP
             0xC3 => self.jp_nn(memory),
             _ => {
                 eprintln!(
@@ -48,11 +54,7 @@ impl Cpu {
         let reg = (opcode >> 3) & 0x07;
         self.write_reg(reg, val, memory);
 
-        if reg == 6 {
-            10
-        } else {
-            7
-        }
+        if reg == 6 { 10 } else { 7 }
     }
     fn ld_rr_nn(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
         let val = self.fetch_word(memory);
@@ -197,5 +199,49 @@ impl Cpu {
         let addr = self.fetch_word(memory);
         self.pc = addr;
         10
+    }
+    /*
+    Opcode 80
+    Bytes 1
+    Cycles 4
+    C as defined
+    N reset
+    P/V detects overflow
+    H as defined
+    Z as defined
+    S as defined
+    Adds B to A.
+        */
+    fn add_a_r(&mut self, opcode: u8, memory: &Memory) -> u8 {
+        let src_code = opcode & 0x07;
+        let old_val = self.a;
+        let val = self.read_reg(src_code, memory);
+        self.a = self.a.wrapping_add(val);
+
+        self.set_flag_n(false);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) == 0x0F);
+        self.set_flag_pv(old_val == 0x7F);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
+        4
+    }
+    fn sub_a_r(&mut self, opcode: u8, memory: &Memory) -> u8 {
+        let src_code = opcode & 0x07;
+        let old_val = self.a;
+        let val = self.read_reg(src_code, memory);
+        self.a = self.a.wrapping_sub(val);
+
+        self.set_flag_n(true);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) == 0x00);
+        self.set_flag_pv(old_val == 0x80);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
+        4
     }
 }

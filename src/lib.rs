@@ -41,10 +41,10 @@
 //! - [`emulator`] - Main emulator coordination
 
 pub mod cpu;
-pub mod memory;
-pub mod video;
-pub mod io;
-pub mod platform;
 pub mod emulator;
+pub mod io;
+pub mod memory;
+pub mod platform;
+pub mod video;
 
 pub use emulator::Emulator;

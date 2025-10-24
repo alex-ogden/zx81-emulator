@@ -1,5 +1,3 @@
-
-
 //! Z80 CPU implementation
 //!
 //! This module implements the Zilog Z80 CPU core used in the ZX81.

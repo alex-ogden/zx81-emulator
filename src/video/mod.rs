@@ -1,5 +1,5 @@
-mod display_file;
 mod character_set;
+mod display_file;
 mod renderer;
 
 // ZX81 Video system

@@ -54,7 +54,8 @@ fn main() {
 fn print_cpu_state(emulator: &Emulator, instruction_num: usize) {
     let cpu = emulator.cpu();
 
-    println!("Instruction #{:04} | PC: 0x{:04X} | A: 0x{:02X} | BC: 0x{:04X} | DE: 0x{:04X} | HL: 0x{:04X} | SP: 0x{:04X} | F: {:08b}",
+    println!(
+        "Instruction #{:04} | PC: 0x{:04X} | A: 0x{:02X} | BC: 0x{:04X} | DE: 0x{:04X} | HL: 0x{:04X} | SP: 0x{:04X} | F: {:08b}",
         instruction_num,
         cpu.pc,
         cpu.a,
