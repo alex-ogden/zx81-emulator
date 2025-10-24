@@ -257,6 +257,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Z80 Instruction Set](https://clrhome.org/table/)
 - [ZX81 Emulation Guide](http://www.z80.info/z80info.htm)
 
+## 🤖 AI usage
+
+- AI has been used in this project to generate documentation (including this README you're reading now!)
+- I have used AI as a research tool for learning about the ZX81 and keeping track of where I'm up to with implementation
+- AI has not been used to implement core functionality.
 ---
 
 **Status:** 🚧 In Development | **Version:** 0.1.0 | **Last Updated:** October 2025
