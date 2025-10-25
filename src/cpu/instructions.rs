@@ -200,48 +200,48 @@ impl Cpu {
         self.pc = addr;
         10
     }
-    /*
-    Opcode 80
-    Bytes 1
-    Cycles 4
-    C as defined
-    N reset
-    P/V detects overflow
-    H as defined
-    Z as defined
-    S as defined
-    Adds B to A.
-        */
     fn add_a_r(&mut self, opcode: u8, memory: &Memory) -> u8 {
         let src_code = opcode & 0x07;
         let old_val = self.a;
         let val = self.read_reg(src_code, memory);
-        self.a = self.a.wrapping_add(val);
+        let new_val = self.a.wrapping_add(val);
+        self.a = new_val;
 
         self.set_flag_n(false);
-        self.set_flag_z(self.a == 0);
-        self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_h((old_val & 0x0F) == 0x0F);
-        self.set_flag_pv(old_val == 0x7F);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) + (val & 0x0F) > 0x0F);
+        self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
 
-        4
+        // Reg->Reg takes 4 cycles
+        // Memory->Reg takes 7 cycles
+        if src_code == 6 { 7 } else { 4 }
     }
     fn sub_a_r(&mut self, opcode: u8, memory: &Memory) -> u8 {
         let src_code = opcode & 0x07;
         let old_val = self.a;
         let val = self.read_reg(src_code, memory);
-        self.a = self.a.wrapping_sub(val);
+        let new_val = old_val.wrapping_sub(val);
+        self.a = new_val;
+
+        // Carry: did we need to borrow? (subtracting larger from smaller)
+        self.set_flag_c(val > old_val);
 
         self.set_flag_n(true);
-        self.set_flag_z(self.a == 0);
-        self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_h((old_val & 0x0F) == 0x00);
-        self.set_flag_pv(old_val == 0x80);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
 
-        4
+        // Half carry: borrow from bit 4
+        self.set_flag_h((old_val & 0x0F) < (val & 0x0F));
+
+        // Overflow: signs of operands different, and result sign differs from minuend
+        self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
+
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        if src_code == 6 { 7 } else { 4 }
     }
 }
