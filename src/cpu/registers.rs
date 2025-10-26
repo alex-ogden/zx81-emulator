@@ -87,6 +87,13 @@ impl Cpu {
     }
 
     // == Flag pair helper functions == //
+    pub fn af(&self) -> u16 {
+        ((self.a as u16) << 8) | (self.f as u16)
+    }
+    pub fn set_af(&mut self, val: u16) {
+        self.a = (val >> 8) as u8;
+        self.f = val as u8;
+    }
     pub fn bc(&self) -> u16 {
         ((self.b as u16) << 8) | (self.c as u16)
     }
@@ -141,5 +148,18 @@ impl Cpu {
             7 => self.a = val,
             _ => unreachable!(),
         }
+    }
+
+    // == POP and PUSH helper functions == //
+    pub fn push(&mut self, val: u16, memory: &mut Memory) {
+        self.sp = self.sp.wrapping_sub(2);
+        memory.write_word(self.sp, val);
+    }
+
+    pub fn pop(&mut self, memory: &Memory) -> u16 {
+        let lo = memory.read(self.sp) as u16;
+        let hi = memory.read(self.sp.wrapping_add(1)) as u16;
+        self.sp = self.sp.wrapping_add(2);
+        (hi << 8) | lo
     }
 }

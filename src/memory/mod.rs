@@ -53,13 +53,19 @@ impl Memory {
         }
     }
 
+    pub fn read_word(&self, addr: u16) -> u16 {
+        let lo = self.read(addr) as u16;
+        let hi = self.read(addr.wrapping_add(1)) as u16;
+        (hi << 8) | lo
+    }
+
     /// Writes a byte to memory
     ///
     /// ROM writes and out-of-bounds RAM writes are silently ignored.
     pub fn write(&mut self, addr: u16, val: u8) {
         match addr {
             0x0000..=0x1FFF => {} // ROM is not writable
-            0x4000..=0x7FFF => {
+            0x4000..=0x43FF => {
                 let offset = (addr - 0x4000) as usize;
                 if offset < self.ram.len() {
                     self.ram[offset] = val;
@@ -67,5 +73,13 @@ impl Memory {
             }
             _ => {} // Ignore writes to out-of-bounds memory addresses
         }
+    }
+
+    pub fn write_word(&mut self, addr: u16, val: u16) {
+        let hi = (val >> 8) as u8;
+        let lo = val as u8;
+
+        self.write(addr, lo);
+        self.write(addr.wrapping_add(1), hi);
     }
 }
