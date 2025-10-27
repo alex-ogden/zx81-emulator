@@ -717,6 +717,202 @@ def test_conditional_calls():
 
     make_rom(program, "test_roms/25_conditional_call.rom")
 
+
+def test_rst():
+    """Test RST (Restart) instructions"""
+    program = [
+        # Initialize stack pointer
+        0x31, 0xFF, 0x43,  # LD SP, 0x43FF    ; addr 0x0000
+        # Main program
+        0x3E, 0x00,        # LD A, 0          ; addr 0x0003
+        0xCF,              # RST 0x08         ; addr 0x0005 - call routine at 0x08
+        0x76,              # HALT             ; addr 0x0006
+
+        # Padding to 0x0008
+        0x00,              # addr 0x0007
+
+        # RST 0x08 routine at 0x0008
+        0x3E, 0x42,        # LD A, 0x42       ; addr 0x0008 - routine sets A=0x42
+        0xC9,              # RET              ; addr 0x000A - return to caller
+    ]
+    make_rom(program, "test_roms/26_rst.rom")
+
+
+def test_immediate_arithmetic():
+    """Test immediate arithmetic operations (ADD A,n, SUB n, etc.)"""
+    program = [
+        # ADD A,n
+        0x3E, 0x10,        # LD A, 0x10
+        0xC6, 0x05,        # ADD A, 0x05      ; A = 0x15
+
+        # ADD A,n with carry
+        0x3E, 0xFF,        # LD A, 0xFF
+        0xC6, 0x02,        # ADD A, 0x02      ; A = 0x01, C flag set
+
+        # ADC A,n (with carry from previous)
+        0x3E, 0x10,        # LD A, 0x10
+        0xCE, 0x05,        # ADC A, 0x05      ; A = 0x16 (0x10 + 0x05 + 1)
+
+        # ADC A,n (without carry)
+        0x37,              # SCF
+        0x3F,              # CCF              ; Clear carry
+        0x3E, 0x20,        # LD A, 0x20
+        0xCE, 0x10,        # ADC A, 0x10      ; A = 0x30
+
+        # SUB n
+        0x3E, 0x20,        # LD A, 0x20
+        0xD6, 0x15,        # SUB 0x15         ; A = 0x0B
+
+        # SUB n with borrow
+        0x3E, 0x05,        # LD A, 0x05
+        0xD6, 0x10,        # SUB 0x10         ; A = 0xF5, C flag set
+
+        # SBC A,n (without carry)
+        0x37,              # SCF
+        0x3F,              # CCF              ; Clear carry
+        0x3E, 0x20,        # LD A, 0x20
+        0xDE, 0x10,        # SBC A, 0x10      ; A = 0x10
+
+        # SBC A,n (with carry)
+        0x37,              # SCF              ; Set carry
+        0x3E, 0x20,        # LD A, 0x20
+        0xDE, 0x10,        # SBC A, 0x10      ; A = 0x0F (0x20 - 0x10 - 1)
+
+        # AND n
+        0x3E, 0xFF,        # LD A, 0xFF
+        0xE6, 0x0F,        # AND 0x0F         ; A = 0x0F
+
+        # XOR n (common way to zero A)
+        0x3E, 0x42,        # LD A, 0x42
+        0xEE, 0x42,        # XOR 0x42         ; A = 0x00, Z flag set
+
+        # OR n
+        0x3E, 0xF0,        # LD A, 0xF0
+        0xF6, 0x0F,        # OR 0x0F          ; A = 0xFF
+
+        # CP n (equal)
+        0x3E, 0x42,        # LD A, 0x42
+        0xFE, 0x42,        # CP 0x42          ; Z flag set, A unchanged
+
+        # CP n (A > n)
+        0x3E, 0x50,        # LD A, 0x50
+        0xFE, 0x30,        # CP 0x30          ; A unchanged
+
+        # CP n (A < n)
+        0x3E, 0x30,        # LD A, 0x30
+        0xFE, 0x50,        # CP 0x50          ; C flag set, A unchanged
+
+        0x76,              # HALT
+    ]
+    make_rom(program, "test_roms/27_immediate_arithmetic.rom")
+
+
+def test_add_hl_16bit():
+    """Test 16-bit ADD HL operations"""
+    program = [
+        # Basic ADD HL,BC
+        0x21, 0x00, 0x10,  # LD HL, 0x1000
+        0x01, 0x34, 0x12,  # LD BC, 0x1234
+        0x09,              # ADD HL,BC        ; HL = 0x2234
+
+        # Basic ADD HL,DE
+        0x21, 0x00, 0x20,  # LD HL, 0x2000
+        0x11, 0x56, 0x78,  # LD DE, 0x7856
+        0x19,              # ADD HL,DE        ; HL = 0x9856
+
+        # ADD HL,HL (doubling)
+        0x21, 0x00, 0x40,  # LD HL, 0x4000
+        0x29,              # ADD HL,HL        ; HL = 0x8000
+
+        # ADD HL,SP
+        0x31, 0x00, 0x43,  # LD SP, 0x4300
+        0x21, 0x00, 0x01,  # LD HL, 0x0100
+        0x39,              # ADD HL,SP        ; HL = 0x4400
+
+        # Test with carry flag (result > 0xFFFF)
+        0x21, 0xFF, 0xFF,  # LD HL, 0xFFFF
+        0x01, 0x02, 0x00,  # LD BC, 0x0002
+        0x09,              # ADD HL,BC        ; HL = 0x0001, C flag set
+
+        # Test half carry (bit 11 -> 12)
+        0x21, 0xFF, 0x0F,  # LD HL, 0x0FFF
+        0x11, 0x01, 0x00,  # LD DE, 0x0001
+        0x19,              # ADD HL,DE        ; HL = 0x1000, H flag set
+
+        # Test without carry or half carry
+        0x21, 0x00, 0x10,  # LD HL, 0x1000
+        0x01, 0x00, 0x20,  # LD BC, 0x2000
+        0x09,              # ADD HL,BC        ; HL = 0x3000, no flags
+
+        # Test both carry and half carry
+        0x21, 0xFF, 0xFF,  # LD HL, 0xFFFF
+        0x11, 0xFF, 0x0F,  # LD DE, 0x0FFF
+        0x19,              # ADD HL,DE        ; HL = 0x0FFE, C and H flags set
+
+        0x76,              # HALT
+    ]
+    make_rom(program, "test_roms/28_add_hl_16bit.rom")
+
+
+def test_exchange_instructions():
+    """Test exchange instructions (EX DE,HL, EX AF,AF', EXX, EX (SP),HL)"""
+    program = [
+        # Test 1: EX DE,HL - Basic register swap
+        0x21, 0x34, 0x12,  # LD HL, 0x1234
+        0x11, 0x78, 0x56,  # LD DE, 0x5678
+        0xEB,              # EX DE,HL         ; Now HL=0x5678, DE=0x1234
+
+        # Test 2: EX AF,AF' - Swap with shadow
+        0x3E, 0x42,        # LD A, 0x42
+        0x37,              # SCF              ; Set carry flag
+        0x08,              # EX AF,AF'        ; Swap to shadow (A=0x00, F=0x00)
+        0x3E, 0x99,        # LD A, 0x99       ; Shadow now has A=0x99
+        0x08,              # EX AF,AF'        ; Swap back (A=0x42, C flag set)
+
+        # Test 3: EXX - Swap BC, DE, HL with shadows
+        0x01, 0x11, 0x11,  # LD BC, 0x1111
+        0x11, 0x22, 0x22,  # LD DE, 0x2222
+        0x21, 0x33, 0x33,  # LD HL, 0x3333
+        0xD9,              # EXX              ; Swap to shadows (all now 0x0000)
+
+        # Load different values into shadows
+        0x01, 0xAA, 0xAA,  # LD BC, 0xAAAA
+        0x11, 0xBB, 0xBB,  # LD DE, 0xBBBB
+        0x21, 0xCC, 0xCC,  # LD HL, 0xCCCC
+        0xD9,              # EXX              ; Swap back (BC=0x1111, DE=0x2222, HL=0x3333)
+
+        # Verify shadows have the new values
+        0xD9,              # EXX              ; Should be BC=0xAAAA, DE=0xBBBB, HL=0xCCCC
+
+        # Test 4: EX (SP),HL - Exchange HL with stack memory
+        0x31, 0xFF, 0x43,  # LD SP, 0x43FF    ; Set stack pointer
+
+        # Push a known value to stack
+        0x21, 0xDD, 0xEE,  # LD HL, 0xEEDD
+        0xE5,              # PUSH HL          ; Stack now has 0xEEDD at SP
+
+        # Load different value in HL
+        0x21, 0x11, 0x22,  # LD HL, 0x2211
+
+        # Exchange HL with top of stack
+        0xE3,              # EX (SP),HL       ; HL now 0xEEDD, stack has 0x2211
+
+        # Verify by popping
+        0xC1,              # POP BC           ; BC should be 0x2211
+
+        # Another EX (SP),HL test with explicit memory setup
+        0x31, 0x00, 0x43,  # LD SP, 0x4300
+        0x21, 0xAB, 0xCD,  # LD HL, 0xCDAB
+        0x22, 0x00, 0x43,  # LD (0x4300), HL  ; Write 0xCDAB to address 0x4300
+
+        0x21, 0x11, 0x11,  # LD HL, 0x1111
+        0xE3,              # EX (SP),HL       ; HL=0xCDAB, [SP]=0x1111
+
+        0x76,              # HALT
+    ]
+    make_rom(program, "test_roms/29_exchange_instructions.rom")
+
+
 if __name__ == "__main__":
     print("Generating Z80 CPU test ROMs...\n")
 
@@ -745,6 +941,10 @@ if __name__ == "__main__":
     test_push_pop()
     test_call_ret()
     test_conditional_calls()
+    test_rst()
+    test_immediate_arithmetic()
+    test_add_hl_16bit()
+    test_exchange_instructions()
 
     print("\nAll test ROMs generated successfully!")
     print("Each ROM is 8KB (0x2000 bytes) as required by the ZX81 emulator.")

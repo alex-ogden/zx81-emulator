@@ -49,7 +49,7 @@ impl Memory {
                     0xFF // Return default out of bounds error
                 }
             }
-            _ => unreachable!(),
+            _ => 0xFF,
         }
     }
 
@@ -65,7 +65,8 @@ impl Memory {
     pub fn write(&mut self, addr: u16, val: u8) {
         match addr {
             0x0000..=0x1FFF => {} // ROM is not writable
-            0x4000..=0x43FF => {
+            0x4000..=0x7FFF => {
+                // RAM expandable up to 16KB
                 let offset = (addr - 0x4000) as usize;
                 if offset < self.ram.len() {
                     self.ram[offset] = val;

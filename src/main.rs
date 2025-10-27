@@ -30,7 +30,7 @@ fn main() {
     println!("Starting emulation...\n");
 
     let mut total_cycles = 0u64;
-    let max_instructions = 1000; // Safety limit
+    let max_instructions = 100000; // Higher limit to allow ROM initialization
 
     for instruction_count in 0..max_instructions {
         // Print CPU state before execution

@@ -5,6 +5,13 @@ use crate::memory::Memory;
 impl Cpu {
     pub(super) fn execute_instruction(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
         match opcode {
+            // ED-prefixed instructions
+            0xED => {
+                let sub_opcode = self.fetch_byte(memory);
+                self.execute_ed_instruction(sub_opcode, memory)
+            }
+
+            // == Regular non-prefixed instructions == //
             // HALT and NOP
             0x00 => self.nop(),
             0x76 => self.halt(),
@@ -39,11 +46,21 @@ impl Cpu {
             0x88..=0x8F => self.adc_a_r(opcode, memory),
             // SBC
             0x98..=0x9F => self.sbc_a_r(opcode, memory),
+            // Immediate arithmetic ops
+            0xC6 => self.add_a_n(memory),
+            0xCE => self.adc_a_n(memory),
+            0xD6 => self.sub_n(memory),
+            0xDE => self.sbc_a_n(memory),
+            0xE6 => self.and_n(memory),
+            0xEE => self.xor_n(memory),
+            0xF6 => self.or_n(memory),
+            0xFE => self.cp_n(memory),
             // SCF and CCF
             0x37 => self.scf(),
             0x3F => self.ccf(),
             // JP
             0xC3 => self.jp_nn(memory),
+            0xE9 => self.jp_hl(),
             // Conditional Jumps
             0xC2 | 0xCA | 0xD2 | 0xDA | 0xE2 | 0xEA | 0xF2 | 0xFA => self.jp_cc_nn(opcode, memory),
             // Relative Jumps
@@ -71,6 +88,12 @@ impl Cpu {
             0xFB => self.ei(),
             0xD3 => self.out_n_a(memory),
             0xDB => self.in_a_n(memory),
+            0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => self.rst_nn(opcode, memory),
+            0x09 | 0x19 | 0x29 | 0x39 => self.add_hl_rr(opcode),
+            0xEB => self.ex_de_hl(),
+            0x08 => self.ex_af_af_prime(),
+            0xD9 => self.exx(),
+            0xE3 => self.ex_sp_hl(memory),
             _ => {
                 eprintln!(
                     "Unknown opcode: 0x{:02X} at PC: 0x{:04X}",
@@ -98,6 +121,74 @@ impl Cpu {
         self.iff1 = true;
         self.iff2 = true;
         4
+    }
+    fn ex_de_hl(&mut self) -> u8 {
+        let temp = self.de();
+        self.set_de(self.hl());
+        self.set_hl(temp);
+        4
+    }
+    fn ex_af_af_prime(&mut self) -> u8 {
+        let temp = self.af();
+        self.set_af(self.af_shadow);
+        self.af_shadow = temp;
+        4
+    }
+    fn exx(&mut self) -> u8 {
+        let temp_bc = self.bc();
+        let temp_de = self.de();
+        let temp_hl = self.hl();
+
+        self.set_bc(self.bc_shadow);
+        self.set_de(self.de_shadow);
+        self.set_hl(self.hl_shadow);
+
+        self.bc_shadow = temp_bc;
+        self.de_shadow = temp_de;
+        self.hl_shadow = temp_hl;
+
+        4
+    }
+    fn ex_sp_hl(&mut self, memory: &mut Memory) -> u8 {
+        let temp_sp = memory.read_word(self.sp);
+        let temp_hl = self.hl();
+
+        memory.write_word(self.sp, temp_hl);
+        self.set_hl(temp_sp);
+
+        19
+    }
+    fn jp_hl(&mut self) -> u8 {
+        self.pc = self.hl();
+        4
+    }
+    fn add_hl_rr(&mut self, opcode: u8) -> u8 {
+        let src_reg = match opcode {
+            0x09 => self.bc(),
+            0x19 => self.de(),
+            0x29 => self.hl(),
+            0x39 => self.sp,
+            _ => unreachable!("Invalid ADD HL, rr opcode: 0x{:02X}", opcode),
+        };
+
+        let old_val = self.hl();
+        let result = self.hl().wrapping_add(src_reg);
+        let intermediate_res = (old_val as u32).wrapping_add(src_reg as u32);
+        self.set_hl(result);
+
+        self.set_flag_c(intermediate_res > 0xFFFF);
+        self.set_flag_n(false);
+        self.set_flag_h(((old_val & 0x0FFF) + (src_reg & 0x0FFF)) > 0x0FFF);
+        self.set_flag_x((self.h & 0x20) != 0);
+        self.set_flag_y((self.h & 0x08) != 0);
+
+        11
+    }
+    fn rst_nn(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+        let addr = (opcode & 0x38) as u16;
+        self.push(self.pc, memory);
+        self.pc = addr;
+        11
     }
     fn out_n_a(&mut self, memory: &Memory) -> u8 {
         let port = self.fetch_byte(memory);
@@ -580,5 +671,143 @@ impl Cpu {
         self.set_flag_x((self.a & 0x20) != 0);
         self.set_flag_y((self.a & 0x08) != 0);
         4
+    }
+    fn add_a_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        let old_val = self.a;
+        let new_val = self.a.wrapping_add(val);
+        self.a = new_val;
+
+        self.set_flag_c((old_val as u16) + (val as u16) > 0xFF);
+        self.set_flag_n(false);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) + (val & 0x0F) > 0x0F);
+        self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        7
+    }
+    fn adc_a_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        let old_val = self.a;
+        let carry = if self.get_flag_c() { 1u8 } else { 0u8 };
+        let new_val = self.a.wrapping_add(val).wrapping_add(carry);
+        self.a = new_val;
+
+        let full_add = (old_val as u16)
+            .wrapping_add(val as u16)
+            .wrapping_add(carry as u16);
+
+        self.set_flag_c(full_add > 0xFF);
+        self.set_flag_n(false);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) + (val & 0x0F) + carry > 0x0F);
+        self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        7
+    }
+    fn sub_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        let old_val = self.a;
+        let new_val = old_val.wrapping_sub(val);
+        self.a = new_val;
+
+        self.set_flag_c(val > old_val);
+        self.set_flag_n(true);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) < (val & 0x0F));
+        self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        7
+    }
+    fn sbc_a_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        let old_val = self.a;
+        let carry = if self.get_flag_c() { 1u8 } else { 0u8 };
+        let new_val = self.a.wrapping_sub(val).wrapping_sub(carry);
+        self.a = new_val;
+
+        let full_sub = (old_val as u16)
+            .wrapping_sub(val as u16)
+            .wrapping_sub(carry as u16);
+
+        self.set_flag_c(full_sub > 0xFF);
+        self.set_flag_n(true);
+        self.set_flag_z(new_val == 0);
+        self.set_flag_s((new_val & 0x80) != 0);
+        self.set_flag_h((old_val & 0x0F) < (val & 0x0F) + carry);
+        self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
+        self.set_flag_x((new_val & 0x20) != 0);
+        self.set_flag_y((new_val & 0x08) != 0);
+
+        7
+    }
+    fn and_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        self.a &= val;
+
+        self.set_flag_c(false);
+        self.set_flag_n(false);
+        self.set_flag_pv(self.a.count_ones() % 2 == 0);
+        self.set_flag_h(true);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
+        7
+    }
+    fn xor_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        self.a ^= val;
+
+        self.set_flag_c(false);
+        self.set_flag_n(false);
+        self.set_flag_pv(self.a.count_ones() % 2 == 0);
+        self.set_flag_h(false);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
+        7
+    }
+    fn or_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        self.a |= val;
+
+        self.set_flag_c(false);
+        self.set_flag_n(false);
+        self.set_flag_pv(self.a.count_ones() % 2 == 0);
+        self.set_flag_h(false);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
+        7
+    }
+    fn cp_n(&mut self, memory: &Memory) -> u8 {
+        let val = self.fetch_byte(memory);
+        let result = self.a.wrapping_sub(val);
+
+        self.set_flag_c(val > self.a);
+        self.set_flag_n(true);
+        self.set_flag_pv(((self.a ^ val) & (self.a ^ result) & 0x80) != 0);
+        self.set_flag_h((self.a & 0x0F) < (val & 0x0F));
+        self.set_flag_z(self.a == val);
+        self.set_flag_s((result & 0x80) != 0);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        7
     }
 }
