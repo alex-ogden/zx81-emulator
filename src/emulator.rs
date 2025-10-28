@@ -12,11 +12,11 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(rom: Vec<u8>, debug_enabled: bool) -> Result<Self, minifb::Error> {
+    pub fn new(rom: Vec<u8>, debug_enabled: bool, rev_video: bool) -> Result<Self, minifb::Error> {
         Ok(Self {
             cpu: Cpu::new(),
             memory: Memory::new(rom),
-            video: Video::new(debug_enabled)?,
+            video: Video::new(debug_enabled, rev_video)?,
             //io: IoController::new(),
             cycles: 0,
         })

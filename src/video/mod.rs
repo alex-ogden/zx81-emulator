@@ -14,10 +14,11 @@ pub struct Video {
     buffer: Vec<u32>,
     width: usize,
     height: usize,
+    rev_video: bool,
 }
 
 impl Video {
-    pub fn new(debug_enabled: bool) -> Result<Self, minifb::Error> {
+    pub fn new(debug_enabled: bool, rev_video: bool) -> Result<Self, minifb::Error> {
         let width = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF
             + if debug_enabled {
                 ZX81_DEBUG_PANEL_WIDTH
@@ -32,6 +33,7 @@ impl Video {
             buffer,
             width,
             height,
+            rev_video,
         })
     }
 
@@ -42,7 +44,12 @@ impl Video {
             return;
         }
 
-        self.buffer.fill(0xFF000000);
+        let bg_color = if self.rev_video {
+            0xFFFFFFFF
+        } else {
+            0xFF000000
+        };
+        self.buffer.fill(bg_color);
 
         // Now render
         let mut addr = d_file_ptr;
@@ -87,9 +94,18 @@ impl Video {
             for bit in 0..8 {
                 let pixel = (bitmap_byte >> (7 - bit)) & 1;
 
-                // Apply inverse video if needed
-                let pixel = if inverse { 1 - pixel } else { pixel };
-                let colour = if pixel == 1 { 0xFFFFFFFF } else { 0xFF000000 }; // White or black
+                // Apply inverse video if needed - and flip if rev_video is true
+                let pixel = if self.rev_video {
+                    if inverse { pixel } else { 1 - pixel }
+                } else {
+                    if inverse { 1 - pixel } else { pixel }
+                };
+
+                let colour = if self.rev_video {
+                    if pixel == 1 { 0xFFFFFFFF } else { 0xFF000000 }
+                } else {
+                    if pixel == 1 { 0xFF000000 } else { 0xFFFFFFFF }
+                };
 
                 for sy in 0..scale {
                     for sx in 0..scale {

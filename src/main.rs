@@ -8,15 +8,31 @@ fn main() {
 
     // We need a minimum of 2 args
     if args.len() < 2 {
-        eprintln!("Usage: {} <rom_file> [--debug]", args[0]);
+        eprintln!("Usage: {} <rom_file> [--debug] [--rev-video]", args[0]);
         process::exit(1);
     }
 
     // Check if debug is enabled
     let debug_enabled: bool = args.contains(&"--debug".to_string());
+    let rev_video: bool = args.contains(&"--rev-video".to_string());
+
+    if debug_enabled {
+        println!("Debug mode enabled...");
+    } else {
+        println!("Debug mode disabled...");
+    }
+
+    if rev_video {
+        println!("Video colour reversal enabled...");
+    } else {
+        println!("Video colour reversal disabled...");
+    }
 
     // Remove --debug from args if it did exist
-    let args: Vec<String> = args.into_iter().filter(|arg| arg != "--debug").collect();
+    let args: Vec<String> = args
+        .into_iter()
+        .filter(|arg| arg != "--debug" && arg != "--rev-video")
+        .collect();
 
     // Load ROM file from args[1]
     let rom = match load_rom(&args[1]) {
@@ -44,7 +60,7 @@ fn main() {
         }
     };
 
-    let mut emulator = match Emulator::new(rom, debug_enabled) {
+    let mut emulator = match Emulator::new(rom, debug_enabled, rev_video) {
         Ok(emu) => emu,
         Err(e) => {
             eprintln!("Failed to create emulator: {}", e);
