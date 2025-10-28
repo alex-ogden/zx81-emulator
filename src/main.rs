@@ -1,7 +1,5 @@
 use std::env;
 use std::process;
-use std::thread::sleep;
-use std::time::Duration;
 
 use zx81_emulator::{Emulator, memory::load_rom};
 
@@ -24,6 +22,20 @@ fn main() {
     let rom = match load_rom(&args[1]) {
         Ok(data) => {
             println!("Loaded ROM: {} ({} bytes)", args[1], data.len());
+
+            // == ROM Sanity Checks == //
+
+            if data.len() != 8192 {
+                eprintln!("WARNING: ROM size is {} bytes, expected 8192", data.len());
+            }
+
+            if data.len() > 3 {
+                println!(
+                    "ROM Signature: {:02X} {:02X} {:02X}",
+                    data[0], data[1], data[2]
+                );
+            }
+
             data
         }
         Err(e) => {
@@ -40,57 +52,77 @@ fn main() {
         }
     };
 
-    // Simple test runner - execute until HALT
     println!("Starting emulation...\n");
 
+    const CYCLES_PER_FRAME: u64 = 65000; // ~3.25MHz / 50Hz
+    const INIT_FRAMES: u32 = 20; // Wait 20 frames (~400ms) before rendering
+
     let mut total_cycles = 0u64;
-    let mut instruction_count = 0;
-    let mut display_initialised = false;
+    let mut frame_count = 0u32;
+    let mut frames_since_init = 0u32;
 
     while emulator.is_window_open() {
-        for _ in 0..1000 {
-            // Print CPU state before execution
-            //print_cpu_state(&emulator, instruction_count);
+        let target_cycles = total_cycles + CYCLES_PER_FRAME;
+        let mut frame_instruction_count = 0;
 
-            // Execute one instruction
+        while total_cycles < target_cycles {
             let cycles = emulator.step();
             total_cycles += cycles as u64;
-            instruction_count += 1;
+            frame_instruction_count += 1;
 
             if emulator.is_halted() {
                 break;
             }
+
+            // Safety check to prevent infinite loops
+            if frame_instruction_count > 100000 {
+                eprintln!("WARNING: Too many instructions in one frame!");
+                break;
+            }
         }
 
-        if instruction_count > 50000 && !display_initialised {
-            println!("Display initialisation should be complete");
-            display_initialised = true;
-        }
+        frame_count += 1;
 
-        if display_initialised {
-            emulator.render_display().unwrap_or_else(|e| {
-                eprintln!("Display error: {}", e);
+        // Wait for init period
+        if frame_count < INIT_FRAMES {
+            if frame_count % 5 == 0 {
+                println!("Initialising... frame {}/{}", frame_count, INIT_FRAMES);
+            }
+
+            // Still update display to keep window responsive
+            emulator.update_display().unwrap_or_else(|e| {
+                eprintln!("Error updating display: {}", e);
             });
         } else {
-            emulator.update_display();
+            // Start rendering
+            if frame_count == INIT_FRAMES {
+                println!("Initialisation complete! Start display rendering");
+                println!("Total cycles executed: {}", total_cycles);
+
+                // Dump system variables for debugging
+                if debug_enabled {
+                    emulator.dump_system_vars();
+                }
+            }
+
+            frames_since_init += 1;
+
+            // Render display
+            emulator
+                .render_display()
+                .unwrap_or_else(|e| eprintln!("Display error: {}", e));
+
+            // Show periodic stats
+            if debug_enabled && frames_since_init % 5 == 0 {
+                println!("Frame: {}, Total cycles: {}", frame_count, total_cycles);
+            }
         }
 
-        std::thread::sleep(std::time::Duration::from_millis(16)); // 60 FPS
+        // Maintain ~50Hz refresh rate (ZX81 standard)
+        std::thread::sleep(std::time::Duration::from_millis(20));
     }
-}
 
-fn print_cpu_state(emulator: &Emulator, instruction_num: usize) {
-    let cpu = emulator.cpu();
-
-    println!(
-        "Instruction #{:04} | PC: 0x{:04X} | A: 0x{:02X} | BC: 0x{:04X} | DE: 0x{:04X} | HL: 0x{:04X} | SP: 0x{:04X} | F: {:08b}",
-        instruction_num,
-        cpu.pc,
-        cpu.a,
-        cpu.bc(),
-        cpu.de(),
-        cpu.hl(),
-        cpu.sp,
-        cpu.f,
-    );
+    println!("\nEmulation stopped.");
+    println!("Total frames: {}", frame_count);
+    println!("Total cycles: {}", total_cycles);
 }

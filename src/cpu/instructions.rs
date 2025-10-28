@@ -271,14 +271,14 @@ impl Cpu {
         11
     }
     fn out_n_a(&mut self, memory: &Memory) -> u8 {
-        let port = self.fetch_byte(memory);
+        let _port = self.fetch_byte(memory);
         // TODO: Implement actual I/O handling
         // For now, just ignore the write
         // println!("OUT (0x{:02X}), A (A=0x{:02X})", port, self.a);
         11
     }
     fn in_a_n(&mut self, memory: &Memory) -> u8 {
-        let port = self.fetch_byte(memory);
+        let _port = self.fetch_byte(memory);
         // TODO: Implement actual I/O handling
         // For now, just return 0xFF (common for unconnected ports)
         self.a = 0xFF;

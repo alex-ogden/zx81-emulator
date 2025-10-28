@@ -209,29 +209,4 @@ impl Cpu {
         self.interrupt_mode = 1;
         8
     }
-
-    fn sbc_hl_bc(&mut self) -> u8 {
-        let hl = self.hl();
-        let bc = self.bc();
-        let carry = if self.get_flag_c() { 1u16 } else { 0u16 };
-
-        let result = hl.wrapping_sub(bc).wrapping_sub(carry);
-        self.set_hl(result);
-
-        // Calculate flags
-        let full_sub = (hl as u32)
-            .wrapping_sub(bc as u32)
-            .wrapping_sub(carry as u32);
-
-        self.set_flag_c(full_sub > 0xFFFF);
-        self.set_flag_n(true);
-        self.set_flag_z(result == 0);
-        self.set_flag_s((result & 0x8000) != 0);
-        self.set_flag_h(((hl & 0x0FFF) as i32 - (bc & 0x0FFF) as i32 - carry as i32) < 0);
-        self.set_flag_pv(((hl ^ bc) & (hl ^ result) & 0x8000) != 0);
-        self.set_flag_x(((result >> 8) & 0x20) != 0);
-        self.set_flag_y(((result >> 8) & 0x08) != 0);
-
-        15
-    }
 }

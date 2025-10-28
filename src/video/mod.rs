@@ -1,10 +1,6 @@
 use crate::memory::Memory;
 use minifb::{Window, WindowOptions};
 
-mod character_set;
-mod display_file;
-mod renderer;
-
 const ZX81_SCREEN_WIDTH: usize = 256; // Screen width
 const ZX81_SCREEN_HEIGHT: usize = 192; // Screen height
 const ZX81_SCREEN_SF: usize = 2; // Scale factor (to fit modern displays)
@@ -42,35 +38,41 @@ impl Video {
     pub fn render(&mut self, memory: &Memory, rom: &[u8]) {
         let d_file_ptr = memory.read_word(0x400C);
 
-        if d_file_ptr < 0x4000 {
+        if d_file_ptr < 0x4000 || d_file_ptr > 0x8000 {
             return;
         }
 
         self.buffer.fill(0xFF000000);
 
-        // Render 24 lines of characters
+        // Now render
         let mut addr = d_file_ptr;
         for line in 0..24 {
             for col in 0..32 {
                 let char_code = memory.read(addr);
                 addr += 1;
 
-                // Stop when a newline is hit
                 if char_code == 0x76 {
                     break;
                 }
 
-                // Render this character
                 self.render_character(char_code, col, line, rom);
             }
 
-            // Skip past new line
-            addr += 1;
+            // Skip to next line - look for the newline
+            for _ in 0..33 {
+                if memory.read(addr) == 0x76 {
+                    addr += 1;
+                    break;
+                }
+                addr += 1;
+            }
         }
     }
 
     fn render_character(&mut self, char_code: u8, col: usize, line: usize, rom: &[u8]) {
+        let inverse = (char_code & 0x80) != 0;
         let char_code = char_code & 0x3F;
+
         let bitmap_addr = 0x1E00 + (char_code as usize * 8);
         let scale = ZX81_SCREEN_SF;
 
@@ -84,12 +86,15 @@ impl Video {
 
             for bit in 0..8 {
                 let pixel = (bitmap_byte >> (7 - bit)) & 1;
+
+                // Apply inverse video if needed
+                let pixel = if inverse { 1 - pixel } else { pixel };
                 let colour = if pixel == 1 { 0xFFFFFFFF } else { 0xFF000000 }; // White or black
 
                 for sy in 0..scale {
                     for sx in 0..scale {
                         let x = screen_x + (bit * scale) + sx;
-                        let y = screen_y + (bit * scale) + sy;
+                        let y = screen_y + (row * scale) + sy;
                         let index = y * self.width + x;
                         if index < self.buffer.len() {
                             self.buffer[index] = colour;
