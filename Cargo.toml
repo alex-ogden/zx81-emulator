@@ -10,3 +10,4 @@ keywords = ["zx81", "emulator", "z80", "retro", "sinclair"]
 categories = ["emulators", "games"]
 
 [dependencies]
+minifb = "0.27"

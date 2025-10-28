@@ -10,11 +10,28 @@ impl Cpu {
                 let sub_opcode = self.fetch_byte(memory);
                 self.execute_ed_instruction(sub_opcode, memory)
             }
+            0xCB => {
+                let sub_opcode = self.fetch_byte(memory);
+                self.execute_cb_instruction(sub_opcode, memory)
+            }
+            0xDD => {
+                let sub_opcode = self.fetch_byte(memory);
+                self.execute_dd_instruction(sub_opcode, memory)
+            }
+            0xFD => {
+                let sub_opcode = self.fetch_byte(memory);
+                self.execute_fd_instruction(sub_opcode, memory)
+            }
 
             // == Regular non-prefixed instructions == //
             // HALT and NOP
             0x00 => self.nop(),
             0x76 => self.halt(),
+            0x17 => self.rla(),
+            0x1F => self.rra(),
+            0x07 => self.rlca(),
+            0x0F => self.rrca(),
+            0x2F => self.cpl(),
             // LD r, n pattern opcodes
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.ld_r_n(opcode, memory),
             // LD rr, nn pattern opcodes
@@ -94,6 +111,7 @@ impl Cpu {
             0x08 => self.ex_af_af_prime(),
             0xD9 => self.exx(),
             0xE3 => self.ex_sp_hl(memory),
+            0xF9 => self.ld_sp_hl(),
             _ => {
                 eprintln!(
                     "Unknown opcode: 0x{:02X} at PC: 0x{:04X}",
@@ -120,6 +138,68 @@ impl Cpu {
     fn ei(&mut self) -> u8 {
         self.iff1 = true;
         self.iff2 = true;
+        4
+    }
+    fn rla(&mut self) -> u8 {
+        let bit7 = self.a >> 7;
+        let carry_bit = if self.get_flag_c() { 1 } else { 0 };
+        let result = (self.a << 1) | carry_bit;
+        self.a = result;
+
+        self.set_flag_c(bit7 == 1);
+        self.set_flag_n(false);
+        self.set_flag_h(false);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        4
+    }
+    fn rlca(&mut self) -> u8 {
+        let bit7 = self.a >> 7;
+        let result = (self.a << 1) | bit7;
+        self.a = result;
+
+        self.set_flag_c(bit7 == 1);
+        self.set_flag_n(false);
+        self.set_flag_h(false);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        4
+    }
+    fn rra(&mut self) -> u8 {
+        let bit0 = self.a & 1;
+        let carry_bit = if self.get_flag_c() { 0x80 } else { 0 };
+        let result = (self.a >> 1) | carry_bit;
+        self.a = result;
+
+        self.set_flag_c(bit0 == 1);
+        self.set_flag_n(false);
+        self.set_flag_h(false);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        4
+    }
+    fn rrca(&mut self) -> u8 {
+        let bit0 = self.a & 1;
+        let result = (self.a >> 1) | (bit0 << 7);
+        self.a = result;
+
+        self.set_flag_c(bit0 == 1);
+        self.set_flag_n(false);
+        self.set_flag_h(false);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        4
+    }
+    fn cpl(&mut self) -> u8 {
+        self.a = !self.a;
+        self.set_flag_n(true);
+        self.set_flag_h(true);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
         4
     }
     fn ex_de_hl(&mut self) -> u8 {
@@ -809,5 +889,10 @@ impl Cpu {
         self.set_flag_y((result & 0x08) != 0);
 
         7
+    }
+
+    fn ld_sp_hl(&mut self) -> u8 {
+        self.sp = self.hl();
+        6
     }
 }

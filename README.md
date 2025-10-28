@@ -21,10 +21,13 @@ The Sinclair ZX81 was a revolutionary home computer released in 1981, bringing c
 ### Currently Implemented
 
 - ✅ **Z80 CPU Core**
-  - **204 opcodes implemented** (out of 256 main opcodes)
+  - **250+ opcodes implemented** across all prefix groups
   - Accurate flag handling (including undocumented X/Y flags)
   - Cycle-accurate timing
   - Shadow register support (AF', BC', DE', HL')
+  - Index registers (IX, IY)
+  - Interrupt registers (I, R)
+  - Can successfully run real ZX81 ROM
 
 - ✅ **Memory System**
   - 8KB ROM support
@@ -33,14 +36,24 @@ The Sinclair ZX81 was a revolutionary home computer released in 1981, bringing c
   - Bounds checking for memory operations
   - 16-bit word read/write operations
 
-- ✅ **Instruction Set** (80% complete)
-  - **Data movement**: LD (all variants), PUSH, POP, EX
+- ✅ **Instruction Set** (90%+ complete)
+  - **Data movement**: LD (all variants), PUSH, POP, EX, LDI, LDIR, LDDR
   - **8-bit arithmetic**: ADD, ADC, SUB, SBC, INC, DEC, CP
-  - **16-bit arithmetic**: ADD HL,rr, INC rr, DEC rr
+  - **16-bit arithmetic**: ADD HL,rr, INC rr, DEC rr, SBC HL,rr
   - **Logical operations**: AND, OR, XOR, CP (register and immediate)
+  - **Rotate/shift**: RLA, RRA, RLCA, RRCA, RL, RR, RLC, RRC, SRL
+  - **Bit operations**: BIT, SET, RES (all CB-prefixed)
   - **Control flow**: JP, JR, CALL, RET (all conditional variants), DJNZ, RST
   - **Exchange**: EX DE,HL, EX AF,AF', EXX, EX (SP),HL
-  - **Special**: NOP, HALT, DI, EI, SCF, CCF, IN, OUT
+  - **Index operations**: IX/IY addressing (DD/FD-prefixed)
+  - **Block operations**: LDI, LDIR, CPIR, LDDR
+  - **Special**: NOP, HALT, DI, EI, SCF, CCF, IM, IN, OUT, LD I/R,A, LD A,I/R, CPL
+
+- ✅ **Video System**
+  - Window creation via minifb
+  - Display file rendering infrastructure
+  - Character set decoding from ROM
+  - Scale factor support (2x default)
 
 - ✅ **Development Tools**
   - ROM loading from file
@@ -51,18 +64,20 @@ The Sinclair ZX81 was a revolutionary home computer released in 1981, bringing c
 
 ### 🚧 In Progress
 
-- Video system (character rendering, display file parsing)
+- Video display output (infrastructure complete, debugging rendering)
 - Keyboard input (8×5 matrix)
-- Full Z80 instruction set
 - Interrupt system (NMI for display timing)
+- On-screen debugger (optional --debug flag support)
 
 ### 📋 Planned
 
+- Complete remaining Z80 opcodes
 - Tape loading (.p and .81 files)
 - SLOW mode display generation
 - Sound (tape interface audio)
-- Debugger with breakpoints
+- Debugger with breakpoints and step-through
 - Save states
+- Configurable memory expansion (16KB/64KB)
 
 ## 🚀 Quick Start
 
@@ -83,6 +98,9 @@ cargo build --release
 
 # Run with a ROM file
 cargo run --release path/to/your/rom.rom
+
+# Run with optional debug panel
+cargo run --release --debug path/to/your/rom.rom
 ```
 
 ### Running Tests
@@ -192,13 +210,23 @@ zx81-emulator/
 - `IN A, (n)` / `OUT (n), A` - I/O operations
 
 ### Status
-**Total: 204 Z80 opcodes implemented** (80% of main instruction set)
+**Total: 250+ Z80 opcodes implemented** (90%+ of instruction set including prefix groups)
 
-### Not Yet Implemented
-- CB-prefixed instructions (bit operations, rotates, shifts)
-- ED-prefixed instructions (block operations, 16-bit I/O)
-- DD/FD-prefixed instructions (IX/IY index register operations)
-- Some rare variants and undocumented opcodes
+### Recently Implemented
+- ✅ CB-prefixed instructions (bit operations, rotates, shifts)
+- ✅ ED-prefixed instructions (block operations, 16-bit I/O, LD I/R)
+- ✅ DD-prefixed instructions (IX index register operations)
+- ✅ FD-prefixed instructions (IY index register operations)
+- ✅ All rotate/shift variants (RLA, RRA, RLCA, RRCA, RL, RR, RLC, RRC, SRL)
+- ✅ Block transfer operations (LDI, LDIR, CPIR, LDDR)
+- ✅ Bit manipulation (BIT, SET, RES)
+
+### Still To Implement
+- Some ED-prefixed I/O block operations
+- DAA (Decimal Adjust Accumulator)
+- Some undocumented/rarely-used opcodes
+- RETI, RETN (return from interrupt)
+- Remaining block operations (CPI, CPD, CPDR, INI, IND, OUTI, OUTD variants)
 
 ## 🧪 Testing
 
@@ -276,13 +304,6 @@ python3 test_roms/make_test_rom.py
 
 ## 🔧 Development
 
-### Building Documentation
-
-```bash
-# Generate and open rustdoc documentation
-cargo doc --open
-```
-
 ### Code Style
 
 This project follows standard Rust conventions:
@@ -347,7 +368,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - AI has been used in this project to generate and update documentation (including this README you're reading now!)
 - AI has been used as a research tool for learning about the ZX81, summarising large data sheets, and keeping track of where I'm up to with implementation
-- AI has not been used to implement core functionality.
+- *Some* instruction function handlers have been implemented with AI after initial learning phase (repeated/almost identical functions for prefixed groups, for example)
 ---
 
-**Status:** 🚧 In Development | **Version:** 0.1.0 | **Last Updated:** October 2025
+**Status:** 🚧 In Development (90%+ CPU complete, video system in progress) | **Version:** 0.1.0 | **Last Updated:** October 2025
