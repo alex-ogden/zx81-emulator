@@ -11,21 +11,23 @@ impl Cpu {
                 let sub_opcode = self.fetch_byte(memory);
                 self.execute_ed_instruction(sub_opcode, memory, io)
             }
+            // CB-prefixed instructions
             0xCB => {
                 let sub_opcode = self.fetch_byte(memory);
                 self.execute_cb_instruction(sub_opcode, memory)
             }
+            // DD-prefixed instructions
             0xDD => {
                 let sub_opcode = self.fetch_byte(memory);
                 self.execute_dd_instruction(sub_opcode, memory)
             }
+            // FD-prefixed instructions
             0xFD => {
                 let sub_opcode = self.fetch_byte(memory);
                 self.execute_fd_instruction(sub_opcode, memory)
             }
 
-            // == Regular non-prefixed instructions == //
-            // HALT and NOP
+            // Regular non-prefixed instructions
             0x00 => self.nop(),
             0x76 => self.halt(),
             0x17 => self.rla(),
@@ -33,11 +35,8 @@ impl Cpu {
             0x07 => self.rlca(),
             0x0F => self.rrca(),
             0x2F => self.cpl(),
-            // LD r, n pattern opcodes
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.ld_r_n(opcode, memory),
-            // LD rr, nn pattern opcodes
             0x01 | 0x11 | 0x21 | 0x31 => self.ld_rr_nn(opcode, memory),
-            // LD r, r' pattern opcodes
             0x40..=0x7F => self.ld_r_r(opcode, memory),
             0x02 | 0x12 => self.ld_rr_indirect_a(opcode, memory),
             0x0A | 0x1A => self.ld_a_rr_indirect(opcode, memory),
@@ -45,26 +44,17 @@ impl Cpu {
             0x3A => self.ld_a_nn_indirect(memory),
             0x22 => self.ld_nn_indirect_hl(memory),
             0x2A => self.ld_hl_nn_indirect(memory),
-            // INC r pattern opcode
             0x04 | 0x0C | 0x14 | 0x1C | 0x24 | 0x2C | 0x3C => self.inc_r(opcode),
-            // INC rr pattern opcode
             0x03 | 0x13 | 0x23 | 0x33 => self.inc_rr(opcode),
             0x34 => self.inc_hl_indirect(memory),
-            // DEC
             0x05 | 0x15 | 0x25 | 0x0D | 0x1D | 0x2D | 0x3D => self.dec_r(opcode),
             0x0B | 0x1B | 0x2B | 0x3B => self.dec_rr(opcode),
             0x35 => self.dec_hl_indirect(memory),
             0x10 => self.dec_jnz_d(memory),
-            // !TODO: Add tests for ADD and SUB (and future ADC and SBC) opcodes
-            // ADD
             0x80..=0x87 => self.add_a_r(opcode, memory),
-            // SUB
             0x90..=0x97 => self.sub_a_r(opcode, memory),
-            // ADC
             0x88..=0x8F => self.adc_a_r(opcode, memory),
-            // SBC
             0x98..=0x9F => self.sbc_a_r(opcode, memory),
-            // Immediate arithmetic ops
             0xC6 => self.add_a_n(memory),
             0xCE => self.adc_a_n(memory),
             0xD6 => self.sub_n(memory),
@@ -73,34 +63,23 @@ impl Cpu {
             0xEE => self.xor_n(memory),
             0xF6 => self.or_n(memory),
             0xFE => self.cp_n(memory),
-            // SCF and CCF
             0x37 => self.scf(),
             0x3F => self.ccf(),
-            // JP
             0xC3 => self.jp_nn(memory),
             0xE9 => self.jp_hl(),
-            // Conditional Jumps
             0xC2 | 0xCA | 0xD2 | 0xDA | 0xE2 | 0xEA | 0xF2 | 0xFA => self.jp_cc_nn(opcode, memory),
-            // Relative Jumps
             0x18 | 0x20 | 0x28 | 0x30 | 0x38 => self.jr_cc_e(opcode, memory),
-            // CALL
             0xCD | 0xC4 | 0xCC | 0xD4 | 0xDC | 0xE4 | 0xEC | 0xF4 | 0xFC => {
                 self.call_cc_nn(opcode, memory)
             }
             0xC9 | 0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xE0 | 0xE8 | 0xF0 | 0xF8 => {
                 self.ret_cc(opcode, memory)
             }
-            // PUSH
             0xC5 | 0xD5 | 0xE5 | 0xF5 => self.push_rr(opcode, memory),
-            // POP
             0xC1 | 0xD1 | 0xE1 | 0xF1 => self.pop_rr(opcode, memory),
-            // Logical AND
             0xA0..=0xA7 => self.and_a_r(opcode, memory),
-            // Logical OR
             0xB0..=0xB7 => self.or_a_r(opcode, memory),
-            // Logical XOR
             0xA8..=0xAF => self.xor_a_r(opcode, memory),
-            // CP / Compare
             0xB8..=0xBF => self.cp_a_r(opcode, memory),
             0xF3 => self.di(),
             0xFB => self.ei(),
