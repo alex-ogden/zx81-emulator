@@ -1,9 +1,10 @@
 use super::Cpu;
 use crate::memory::Memory;
+use crate::io::IoController;
 
 // Further implementation of Cpu with opcode functions
 impl Cpu {
-    pub(super) fn execute_instruction(&mut self, opcode: u8, memory: &mut Memory, io: &mut crate::io::IoController) -> u8 {
+    pub(super) fn execute_instruction(&mut self, opcode: u8, memory: &mut Memory, io: &mut IoController) -> u8 {
         match opcode {
             // ED-prefixed instructions
             0xED => {
@@ -270,12 +271,12 @@ impl Cpu {
         self.pc = addr;
         11
     }
-    fn out_n_a(&mut self, memory: &Memory, io: &mut crate::io::IoController) -> u8 {
+    fn out_n_a(&mut self, memory: &Memory, io: &mut IoController) -> u8 {
         let port = self.fetch_byte(memory);
         io.write_port(port, self.a);
         11
     }
-    fn in_a_n(&mut self, memory: &Memory, io: &mut crate::io::IoController) -> u8 {
+    fn in_a_n(&mut self, memory: &Memory, io: &mut IoController) -> u8 {
         let port = self.fetch_byte(memory);
         self.a = io.read_port(port, self.a);
         11
