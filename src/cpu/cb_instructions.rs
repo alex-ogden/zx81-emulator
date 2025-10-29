@@ -8,6 +8,8 @@ impl Cpu {
             0x08..=0x0F => self.rrc_r(opcode, memory),
             0x10..=0x17 => self.rl_r(opcode, memory),
             0x18..=0x1F => self.rr_r(opcode, memory),
+            0x20..=0x27 => self.sla_r(opcode, memory),
+            0x28..=0x2F => self.sra_r(opcode, memory),
             0x38..=0x3F => self.srl_r(opcode, memory),
             0x40..=0x7F => self.bit_n_r(opcode, memory),
             0x80..=0xBF => self.res_n_r(opcode, memory),
@@ -83,6 +85,45 @@ impl Cpu {
         let val = self.read_reg(reg, memory);
         let bit0 = val & 1;
         let result = (val >> 1) | old_carry;
+        self.write_reg(reg, result, memory);
+
+        self.set_flag_c(bit0 == 1);
+        self.set_flag_n(false);
+        self.set_flag_h(false);
+        self.set_flag_z(result == 0);
+        self.set_flag_s((result & 0x80) != 0);
+        self.set_flag_pv(result.count_ones() % 2 == 0);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        if reg == 6 { 15 } else { 8 }
+    }
+
+    fn sla_r(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+        let reg = opcode & 0x07;
+        let val = self.read_reg(reg, memory);
+        let bit7 = val >> 7;
+        let result = val << 1;
+        self.write_reg(reg, result, memory);
+
+        self.set_flag_c(bit7 == 1);
+        self.set_flag_n(false);
+        self.set_flag_h(false);
+        self.set_flag_z(result == 0);
+        self.set_flag_s((result & 0x80) != 0);
+        self.set_flag_pv(result.count_ones() % 2 == 0);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
+        if reg == 6 { 15 } else { 8 }
+    }
+
+    fn sra_r(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+        let reg = opcode & 0x07;
+        let val = self.read_reg(reg, memory);
+        let bit7 = val & 0x80;
+        let bit0 = val & 1;
+        let result = (val >> 1) | bit7;
         self.write_reg(reg, result, memory);
 
         self.set_flag_c(bit0 == 1);

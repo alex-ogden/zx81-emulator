@@ -123,6 +123,8 @@ fn main() {
 
             frames_since_init += 1;
 
+            // Get keyboard input
+            emulator.update_keyboard();
             // Render display
             emulator
                 .render_display()

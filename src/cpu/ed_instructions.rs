@@ -1,15 +1,14 @@
 use super::Cpu;
 use crate::memory::Memory;
 
-// ED-prefixed opcodes (extended instructions)
 impl Cpu {
-    pub(super) fn execute_ed_instruction(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+    pub(super) fn execute_ed_instruction(&mut self, opcode: u8, memory: &mut Memory, io: &mut crate::io::IoController) -> u8 {
         match opcode {
             0x4F => self.ld_r_a(),
             0x47 => self.ld_i_a(),
             0x5F => self.ld_a_r(),
             0x56 => self.im_1(),
-            0x78 => self.in_a_c(),
+            0x78 => self.in_a_c(io),
 
             // Consolidated patterns:
             0x4B | 0x5B | 0x7B => self.ld_rr_nn_indirect(opcode, memory),
@@ -193,8 +192,8 @@ impl Cpu {
         9
     }
 
-    fn in_a_c(&mut self) -> u8 {
-        self.a = 0xFF;
+    fn in_a_c(&mut self, io: &mut crate::io::IoController) -> u8 {
+        self.a = io.read_port(self.c, self.b);
         self.set_flag_s((self.a & 0x80) != 0);
         self.set_flag_z(self.a == 0);
         self.set_flag_h(false);

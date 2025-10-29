@@ -80,4 +80,9 @@ impl Emulator {
         self.video.render(&self.memory, self.memory.rom());
         self.video.update()
     }
+
+    pub fn update_keyboard(&mut self) {
+        let keys = self.video.get_keys();
+        self.io.update_keys(&keys);
+    }
 }

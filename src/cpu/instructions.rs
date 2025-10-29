@@ -8,7 +8,7 @@ impl Cpu {
             // ED-prefixed instructions
             0xED => {
                 let sub_opcode = self.fetch_byte(memory);
-                self.execute_ed_instruction(sub_opcode, memory)
+                self.execute_ed_instruction(sub_opcode, memory, io)
             }
             0xCB => {
                 let sub_opcode = self.fetch_byte(memory);
@@ -277,7 +277,7 @@ impl Cpu {
     }
     fn in_a_n(&mut self, memory: &Memory, io: &mut crate::io::IoController) -> u8 {
         let port = self.fetch_byte(memory);
-        self.a = io.read_port(port);
+        self.a = io.read_port(port, self.a);
         11
     }
     fn ld_rr_indirect_a(&mut self, opcode: u8, memory: &mut Memory) -> u8 {

@@ -126,4 +126,8 @@ impl Video {
     pub fn is_open(&self) -> bool {
         self.window.is_open()
     }
+
+    pub fn get_keys(&self) -> Vec<minifb::Key> {
+        self.window.get_keys()
+    }
 }

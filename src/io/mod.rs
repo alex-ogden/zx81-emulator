@@ -1,72 +1,106 @@
-// I/O port handling for ZX81
-// Main I/O port is 0xFE for keyboard and tape
-use std::collections::HashSet;
-
 pub struct IoController {
-    keyboard_state: [[bool; 10]; 4],    // 4 rows x 10 cols
-    pressed_keys: HashSet<minifb::Key>, // For key input
+    keyboard_state: [[bool; 5]; 8],
 }
 
 impl IoController {
     pub fn new() -> Self {
         Self {
-            keyboard_state: [[false; 10]; 4],
-            pressed_keys: HashSet::new(),
+            keyboard_state: [[false; 5]; 8],
         }
     }
 
-    fn create_key_map() -> HashSet<minifb::Key, (usize, usize)> {
-        let mut map = HashSet::new();
+    pub fn read_port(&self, port: u8, addr_high: u8) -> u8 {
+        if port == 0xFE {
+            let mut result = 0xFF;
 
-        // Row 0
-        map.insert(minifb::Key::Key1, (0, 0));
-        map.insert(minifb::Key::Key2, (0, 1));
-        map.insert(minifb::Key::Key3, (0, 2));
-        map.insert(minifb::Key::Key4, (0, 3));
-        map.insert(minifb::Key::Key5, (0, 4));
-        map.insert(minifb::Key::Key6, (0, 5));
-        map.insert(minifb::Key::Key7, (0, 6));
-        map.insert(minifb::Key::Key8, (0, 7));
-        map.insert(minifb::Key::Key9, (0, 8));
-        map.insert(minifb::Key::Key0, (0, 9));
+            let row = match addr_high {
+                0xFE => 0,
+                0xFD => 1,
+                0xFB => 2,
+                0xF7 => 3,
+                0xEF => 4,
+                0xDF => 5,
+                0xBF => 6,
+                0x7F => 7,
+                _ => return 0xFF,
+            };
 
-        // Row 1
-        map.insert(minifb::Key::Q, (1, 0));
-        map.insert(minifb::Key::W, (1, 1));
-        map.insert(minifb::Key::E, (1, 2));
-        map.insert(minifb::Key::R, (1, 3));
-        map.insert(minifb::Key::T, (1, 4));
-        map.insert(minifb::Key::Y, (1, 5));
-        map.insert(minifb::Key::U, (1, 6));
-        map.insert(minifb::Key::I, (1, 7));
-        map.insert(minifb::Key::O, (1, 8));
-        map.insert(minifb::Key::P, (1, 9));
+            for col in 0..5 {
+                if self.keyboard_state[row][col] {
+                    result &= !(1 << col);
+                }
+            }
 
-        // Row 2
-        map.insert(minifb::Key::A, (2, 0));
-        map.insert(minifb::Key::S, (2, 1));
-        map.insert(minifb::Key::D, (2, 2));
-        map.insert(minifb::Key::F, (2, 3));
-        map.insert(minifb::Key::G, (2, 4));
-        map.insert(minifb::Key::H, (2, 5));
-        map.insert(minifb::Key::J, (2, 6));
-        map.insert(minifb::Key::K, (2, 7));
-        map.insert(minifb::Key::L, (2, 8));
-        map.insert(minifb::Key::Enter, (2, 9));
+            result
+        } else {
+            0xFF
+        }
+    }
 
-        // Row 3
-        map.insert(minifb::Key::LeftShift, (3, 0));
-        map.insert(minifb::Key::RightShift, (3, 0)); // Both shift keys same
-        map.insert(minifb::Key::Z, (3, 1));
-        map.insert(minifb::Key::X, (3, 2));
-        map.insert(minifb::Key::C, (3, 3));
-        map.insert(minifb::Key::V, (3, 4));
-        map.insert(minifb::Key::B, (3, 5));
-        map.insert(minifb::Key::N, (3, 6));
-        map.insert(minifb::Key::M, (3, 7));
-        map.insert(minifb::Key::Period, (3, 8));
-        map.insert(minifb::Key::Space, (3, 9));
+    pub fn update_keys(&mut self, keys: &[minifb::Key]) {
+        self.keyboard_state = [[false; 5]; 8];
 
-        map
+        for key in keys {
+            if let Some((row, col)) = Self::map_key(*key) {
+                self.keyboard_state[row][col] = true;
+            }
+        }
+    }
+
+    fn map_key(key: minifb::Key) -> Option<(usize, usize)> {
+        match key {
+            minifb::Key::LeftShift | minifb::Key::RightShift => Some((0, 0)),
+            minifb::Key::Z => Some((0, 1)),
+            minifb::Key::X => Some((0, 2)),
+            minifb::Key::C => Some((0, 3)),
+            minifb::Key::V => Some((0, 4)),
+
+            minifb::Key::A => Some((1, 0)),
+            minifb::Key::S => Some((1, 1)),
+            minifb::Key::D => Some((1, 2)),
+            minifb::Key::F => Some((1, 3)),
+            minifb::Key::G => Some((1, 4)),
+
+            minifb::Key::Q => Some((2, 0)),
+            minifb::Key::W => Some((2, 1)),
+            minifb::Key::E => Some((2, 2)),
+            minifb::Key::R => Some((2, 3)),
+            minifb::Key::T => Some((2, 4)),
+
+            minifb::Key::Key1 => Some((3, 0)),
+            minifb::Key::Key2 => Some((3, 1)),
+            minifb::Key::Key3 => Some((3, 2)),
+            minifb::Key::Key4 => Some((3, 3)),
+            minifb::Key::Key5 => Some((3, 4)),
+
+            minifb::Key::Key0 => Some((4, 0)),
+            minifb::Key::Key9 => Some((4, 1)),
+            minifb::Key::Key8 => Some((4, 2)),
+            minifb::Key::Key7 => Some((4, 3)),
+            minifb::Key::Key6 => Some((4, 4)),
+
+            minifb::Key::P => Some((5, 0)),
+            minifb::Key::O => Some((5, 1)),
+            minifb::Key::I => Some((5, 2)),
+            minifb::Key::U => Some((5, 3)),
+            minifb::Key::Y => Some((5, 4)),
+
+            minifb::Key::Enter => Some((6, 0)),
+            minifb::Key::L => Some((6, 1)),
+            minifb::Key::K => Some((6, 2)),
+            minifb::Key::J => Some((6, 3)),
+            minifb::Key::H => Some((6, 4)),
+
+            minifb::Key::Space => Some((7, 0)),
+            minifb::Key::Period => Some((7, 1)),
+            minifb::Key::M => Some((7, 2)),
+            minifb::Key::N => Some((7, 3)),
+            minifb::Key::B => Some((7, 4)),
+
+            _ => None,
+        }
+    }
+
+    pub fn write_port(&mut self, _port: u8, _value: u8) {
     }
 }
