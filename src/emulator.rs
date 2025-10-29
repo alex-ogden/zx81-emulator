@@ -1,5 +1,5 @@
 use crate::cpu::Cpu;
-// use crate::io::IoController;
+use crate::io::IoController;
 use crate::memory::Memory;
 use crate::video::Video;
 
@@ -7,7 +7,7 @@ pub struct Emulator {
     cpu: Cpu,
     memory: Memory,
     video: Video,
-    //io: IoController,
+    io: IoController,
     cycles: u64,
 }
 
@@ -17,13 +17,13 @@ impl Emulator {
             cpu: Cpu::new(),
             memory: Memory::new(rom),
             video: Video::new(debug_enabled, rev_video)?,
-            //io: IoController::new(),
+            io: IoController::new(),
             cycles: 0,
         })
     }
 
     pub fn step(&mut self) -> u8 {
-        let cycles = self.cpu.step(&mut self.memory);
+        let cycles = self.cpu.step(&mut self.memory, &mut self.io);
         self.cycles += cycles as u64;
         // TODO: Handle video timing
         // TODO: Handle interrupts

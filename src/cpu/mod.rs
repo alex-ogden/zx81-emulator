@@ -82,7 +82,7 @@ impl Cpu {
         (hi << 8) | lo
     }
 
-    pub fn step(&mut self, memory: &mut Memory) -> u8 {
+    pub fn step(&mut self, memory: &mut Memory, io: &mut crate::io::IoController) -> u8 {
         // Is the system halted?
         if self.is_halted {
             // For now just return 4 cycles
@@ -92,11 +92,11 @@ impl Cpu {
         // Retrieve the opcode in the memory where our program counter currently is
         // PC is incremented in fetch_byte automatically
         let opcode = self.fetch_byte(memory);
-        let cycles = self.execute(opcode, memory);
+        let cycles = self.execute(opcode, memory, io);
         cycles
     }
-    fn execute(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+    fn execute(&mut self, opcode: u8, memory: &mut Memory, io: &mut crate::io::IoController) -> u8 {
         // execute_instruction is found in instructions.rs
-        self.execute_instruction(opcode, memory)
+        self.execute_instruction(opcode, memory, io)
     }
 }
