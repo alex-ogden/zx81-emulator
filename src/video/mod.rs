@@ -94,17 +94,13 @@ impl Video {
             for bit in 0..8 {
                 let pixel = (bitmap_byte >> (7 - bit)) & 1;
 
-                // Apply inverse video if needed - and flip if rev_video is true
-                let pixel = if self.rev_video {
-                    if inverse { pixel } else { 1 - pixel }
-                } else {
-                    if inverse { 1 - pixel } else { pixel }
-                };
+                // Apply inverse video if needed
+                let pixel = if inverse { 1 - pixel } else { pixel };
 
                 let colour = if self.rev_video {
-                    if pixel == 1 { 0xFFFFFFFF } else { 0xFF000000 }
-                } else {
                     if pixel == 1 { 0xFF000000 } else { 0xFFFFFFFF }
+                } else {
+                    if pixel == 1 { 0xFFFFFFFF } else { 0xFF000000 }
                 };
 
                 for sy in 0..scale {
