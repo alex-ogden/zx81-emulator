@@ -137,7 +137,7 @@ fn main() {
         }
 
         // Maintain ~50Hz refresh rate (ZX81 standard)
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
     println!("\nEmulation stopped.");

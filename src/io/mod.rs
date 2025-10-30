@@ -101,6 +101,5 @@ impl IoController {
         }
     }
 
-    pub fn write_port(&mut self, _port: u8, _value: u8) {
-    }
+    pub fn write_port(&mut self, _port: u8, _value: u8) {}
 }

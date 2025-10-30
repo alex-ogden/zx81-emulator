@@ -51,11 +51,6 @@ impl Emulator {
         println!("=============================\n");
     }
 
-    pub fn run_frame(&mut self) {
-        // TODO: Run emulation for one frame (1/50th second)
-        // TODO: Generate display
-    }
-
     pub fn cpu(&self) -> &Cpu {
         &self.cpu
     }

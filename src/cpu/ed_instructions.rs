@@ -2,18 +2,25 @@ use super::Cpu;
 use crate::memory::Memory;
 
 impl Cpu {
-    pub(super) fn execute_ed_instruction(&mut self, opcode: u8, memory: &mut Memory, io: &mut crate::io::IoController) -> u8 {
+    pub(super) fn execute_ed_instruction(
+        &mut self,
+        opcode: u8,
+        memory: &mut Memory,
+        io: &mut crate::io::IoController,
+    ) -> u8 {
         match opcode {
             0x4F => self.ld_r_a(),
             0x47 => self.ld_i_a(),
             0x5F => self.ld_a_r(),
             0x56 => self.im_1(),
             0x78 => self.in_a_c(io),
+            0x44 => self.neg(),
 
             // Consolidated patterns:
             0x4B | 0x5B | 0x7B => self.ld_rr_nn_indirect(opcode, memory),
             0x43 | 0x53 | 0x63 | 0x73 => self.ld_nn_indirect_rr(opcode, memory),
             0x42 | 0x52 | 0x62 | 0x72 => self.sbc_hl_rr(opcode),
+            0x4A | 0x5A | 0x6A | 0x7A => self.adc_hl_rr(opcode),
 
             0xA0 => self.ldi(memory),
             0xB0 => self.ldir(memory),
@@ -206,6 +213,50 @@ impl Cpu {
 
     fn im_1(&mut self) -> u8 {
         self.interrupt_mode = 1;
+        8
+    }
+
+    fn adc_hl_rr(&mut self, opcode: u8) -> u8 {
+        let rr = match opcode {
+            0x4A => self.bc(),
+            0x5A => self.de(),
+            0x6A => self.hl(),
+            0x7A => self.sp,
+            _ => unreachable!(),
+        };
+
+        let hl = self.hl();
+        let carry = if self.get_flag_c() { 1 } else { 0 };
+        let result = hl.wrapping_add(rr).wrapping_add(carry);
+        self.set_hl(result);
+
+        self.set_flag_s((result & 0x8000) != 0);
+        self.set_flag_z(result == 0);
+        self.set_flag_h(((hl & 0x0FFF) + (rr & 0x0FFF) + carry) > 0x0FFF);
+        self.set_flag_pv(((hl ^ rr) & 0x8000) == 0 && ((hl ^ result) & 0x8000) != 0);
+        self.set_flag_n(false);
+        self.set_flag_c((hl as u32 + rr as u32 + carry as u32) > 0xFFFF);
+        self.set_flag_x((result & 0x2000) != 0);
+        self.set_flag_y((result & 0x0800) != 0);
+
+        15
+    }
+
+    fn neg(&mut self) -> u8 {
+        let a = self.a;
+        let result = 0u8.wrapping_sub(a);
+
+        self.a = result;
+
+        self.set_flag_s((result & 0x80) != 0);
+        self.set_flag_z(result == 0);
+        self.set_flag_h((0 & 0x0F) < (a & 0x0F));
+        self.set_flag_pv(a == 0x80);
+        self.set_flag_n(true);
+        self.set_flag_c(a != 0);
+        self.set_flag_x((result & 0x20) != 0);
+        self.set_flag_y((result & 0x08) != 0);
+
         8
     }
 }

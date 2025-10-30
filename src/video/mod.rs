@@ -3,7 +3,7 @@ use minifb::{Window, WindowOptions};
 
 const ZX81_SCREEN_WIDTH: usize = 256; // Screen width
 const ZX81_SCREEN_HEIGHT: usize = 192; // Screen height
-const ZX81_SCREEN_SF: usize = 2; // Scale factor (to fit modern displays)
+const ZX81_SCREEN_SF: usize = 3; // Scale factor (to fit modern displays)
 const ZX81_DEBUG_PANEL_WIDTH: usize = 192;
 
 // ZX81 Video system
@@ -19,15 +19,17 @@ pub struct Video {
 
 impl Video {
     pub fn new(debug_enabled: bool, rev_video: bool) -> Result<Self, minifb::Error> {
-        let width = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF
-            + if debug_enabled {
-                ZX81_DEBUG_PANEL_WIDTH
-            } else {
-                0
-            };
+        let width = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF;
         let height = ZX81_SCREEN_HEIGHT * ZX81_SCREEN_SF;
+
         let window = Window::new("ZX81 Emulator", width, height, WindowOptions::default())?;
         let buffer = vec![0; width * height];
+
+        if debug_enabled {
+            println!("Window size: {} x {}", width, height);
+            println!("Buffer size: {} pixels", buffer.len());
+        }
+
         Ok(Self {
             window,
             buffer,
@@ -36,7 +38,6 @@ impl Video {
             rev_video,
         })
     }
-
     pub fn render(&mut self, memory: &Memory, rom: &[u8]) {
         let d_file_ptr = memory.read_word(0x400C);
 
@@ -80,7 +81,17 @@ impl Video {
         let inverse = (char_code & 0x80) != 0;
         let char_code = char_code & 0x3F;
 
+        if char_code >= 64 {
+            // Invalid character
+            return;
+        }
+
         let bitmap_addr = 0x1E00 + (char_code as usize * 8);
+
+        if bitmap_addr + 8 > rom.len() {
+            return;
+        }
+
         let scale = ZX81_SCREEN_SF;
 
         // Calculate screen position
