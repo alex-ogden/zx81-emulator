@@ -1,10 +1,15 @@
 use super::Cpu;
-use crate::memory::Memory;
 use crate::io::IoController;
+use crate::memory::Memory;
 
 // Further implementation of Cpu with opcode functions
 impl Cpu {
-    pub(super) fn execute_instruction(&mut self, opcode: u8, memory: &mut Memory, io: &mut IoController) -> u8 {
+    pub(super) fn execute_instruction(
+        &mut self,
+        opcode: u8,
+        memory: &mut Memory,
+        io: &mut IoController,
+    ) -> u8 {
         match opcode {
             // ED-prefixed instructions
             0xED => {
