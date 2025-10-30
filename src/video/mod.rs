@@ -54,12 +54,9 @@ impl Video {
 
         // Now render
         let mut addr = d_file_ptr;
-        println!("\n====================================");
         for line in 0..24 {
-            print!("Line {}:", line);
             for col in 0..32 {
                 let char_code = memory.read(addr);
-                print!(" {:02X} ", char_code);
                 addr += 1;
 
                 if char_code == 0x76 {
@@ -75,9 +72,7 @@ impl Video {
                     break;
                 }
             }
-            println!();
         }
-        println!("====================================\n");
     }
 
     fn render_character(&mut self, char_code: u8, col: usize, line: usize, rom: &[u8]) {

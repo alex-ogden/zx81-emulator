@@ -39,6 +39,7 @@ impl Cpu {
             0x1F => self.rra(),
             0x07 => self.rlca(),
             0x0F => self.rrca(),
+            //0x27 => self.daa(),
             0x2F => self.cpl(),
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.ld_r_n(opcode, memory),
             0x01 | 0x11 | 0x21 | 0x31 => self.ld_rr_nn(opcode, memory),
