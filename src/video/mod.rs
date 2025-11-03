@@ -2,7 +2,7 @@ use crate::memory::Memory;
 use minifb::{Window, WindowOptions};
 
 const ZX81_SCREEN_WIDTH: usize = 256; // Screen width
-const ZX81_SCREEN_HEIGHT: usize = 200; // Screen height
+const ZX81_SCREEN_HEIGHT: usize = 192; // Screen height
 const ZX81_SCREEN_SF: usize = 3; // Scale factor (to fit modern displays)
 const ZX81_DEBUG_PANEL_WIDTH: usize = 192;
 
@@ -52,12 +52,12 @@ impl Video {
         };
         self.buffer.fill(bg_color);
 
-        // Now render
-        let mut addr = d_file_ptr;
+        // Render characters
+        let mut addr = d_file_ptr + 1;
         println!("\n======== Screen Debug ========");
-        for line in 0..25 {
+        for line in 0..24 {
             print!("Line: {}: ", line);
-            for col in 0..33 {
+            for col in 0..32 {
                 let char_code = memory.read(addr);
                 print!(" {:02X} ", char_code);
                 addr += 1;
@@ -68,16 +68,7 @@ impl Video {
 
                 self.render_character(char_code, col, line, rom);
             }
-
-            // for _ in 0..33 {
-            //     let ch = memory.read(addr);
-            //     print!(" {:02X} ", ch);
-            //     if ch == 0x76 {
-            //         addr += 1;
-            //         break;
-            //     }
-            //     addr += 1;
-            // }
+            addr += 1;
             println!();
         }
     }
