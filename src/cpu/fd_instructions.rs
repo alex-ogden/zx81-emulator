@@ -9,6 +9,7 @@ impl Cpu {
             0x35 => self.dec_iy_d(memory),
             0x46 | 0x4E | 0x56 | 0x5E | 0x66 | 0x6E | 0x7E => self.ld_r_iy_d(opcode, memory),
             0x70 | 0x71 | 0x72 | 0x73 | 0x74 | 0x75 | 0x77 => self.ld_iy_d_r(opcode, memory),
+            0xAE => self.xor_iy_d(memory),
             0xBE => self.cp_iy_d(memory),
             0xCB => {
                 let d = self.fetch_byte(memory) as i8;
@@ -91,6 +92,24 @@ impl Cpu {
         };
 
         memory.write(addr, val);
+        19
+    }
+
+    fn xor_iy_d(&mut self, memory: &Memory) -> u8 {
+        let d = self.fetch_byte(memory) as i8;
+        let addr = self.iy.wrapping_add(d as u16);
+        let val = memory.read(addr);
+        self.a ^= val;
+
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_h(false);
+        self.set_flag_pv(self.a.count_ones() % 2 == 0);
+        self.set_flag_n(false);
+        self.set_flag_c(false);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
         19
     }
 

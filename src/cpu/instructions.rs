@@ -39,7 +39,7 @@ impl Cpu {
             0x1F => self.rra(),
             0x07 => self.rlca(),
             0x0F => self.rrca(),
-            //0x27 => self.daa(),
+            0x27 => self.daa(),
             0x2F => self.cpl(),
             0x06 | 0x0E | 0x16 | 0x1E | 0x26 | 0x2E | 0x36 | 0x3E => self.ld_r_n(opcode, memory),
             0x01 | 0x11 | 0x21 | 0x31 => self.ld_rr_nn(opcode, memory),
@@ -180,6 +180,44 @@ impl Cpu {
 
         4
     }
+
+    fn daa(&mut self) -> u8 {
+        // Decimal Adjust Accumulator for BCD arithmetic
+        let mut correction = 0u8;
+        let mut carry = false;
+
+        // Check if we need to adjust the lower nibble
+        if self.get_flag_h() || (self.a & 0x0F) > 9 {
+            correction |= 0x06;
+        }
+
+        // Check if we need to adjust the upper nibble
+        if self.get_flag_c() || self.a > 0x99 {
+            correction |= 0x60;
+            carry = true;
+        }
+
+        // Apply correction based on whether last operation was addition or subtraction
+        if self.get_flag_n() {
+            // Subtraction - adjust downward
+            self.a = self.a.wrapping_sub(correction);
+        } else {
+            // Addition - adjust upward
+            self.a = self.a.wrapping_add(correction);
+        }
+
+        // Set flags
+        self.set_flag_s((self.a & 0x80) != 0);
+        self.set_flag_z(self.a == 0);
+        self.set_flag_h((correction & 0x06) != 0);
+        self.set_flag_pv(self.a.count_ones() % 2 == 0);
+        self.set_flag_c(carry);
+        self.set_flag_x((self.a & 0x20) != 0);
+        self.set_flag_y((self.a & 0x08) != 0);
+
+        4
+    }
+
     fn cpl(&mut self) -> u8 {
         self.a = !self.a;
         self.set_flag_n(true);

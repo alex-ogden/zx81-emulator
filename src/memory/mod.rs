@@ -12,7 +12,7 @@ impl Memory {
     pub fn new(rom: Vec<u8>) -> Self {
         Self {
             rom,
-            ram: vec![0; 0x400], // 1K RAM (base model)
+            ram: vec![0; 0x4000], // 16K RAM
         }
     }
 
