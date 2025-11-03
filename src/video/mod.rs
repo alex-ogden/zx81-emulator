@@ -38,7 +38,7 @@ impl Video {
             rev_video,
         })
     }
-    pub fn render(&mut self, memory: &Memory, rom: &[u8]) {
+    pub fn render(&mut self, memory: &Memory, rom: &[u8], debug_enabled: bool) {
         let d_file_ptr = memory.read_word(0x400C);
 
         if d_file_ptr < 0x4000 || d_file_ptr > 0x8000 {
@@ -54,12 +54,19 @@ impl Video {
 
         // Render characters
         let mut addr = d_file_ptr + 1;
-        println!("\n======== Screen Debug ========");
+        // !TODO: Implement better debug handling
+        if debug_enabled {
+            println!("\n======== Screen Debug ========");
+        }
         for line in 0..24 {
-            print!("Line: {}: ", line);
+            if debug_enabled {
+                print!("Line: {}: ", line);
+            }
             for col in 0..32 {
                 let char_code = memory.read(addr);
-                print!(" {:02X} ", char_code);
+                if debug_enabled {
+                    print!(" {:02X} ", char_code);
+                }
                 addr += 1;
 
                 if char_code == 0x76 {
@@ -69,7 +76,9 @@ impl Video {
                 self.render_character(char_code, col, line, rom);
             }
             addr += 1;
-            println!();
+            if debug_enabled {
+                println!();
+            }
         }
     }
 

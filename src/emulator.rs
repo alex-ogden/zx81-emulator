@@ -71,8 +71,9 @@ impl Emulator {
         self.video.is_open()
     }
 
-    pub fn render_display(&mut self) -> Result<(), minifb::Error> {
-        self.video.render(&self.memory, self.memory.rom());
+    pub fn render_display(&mut self, debug_enabled: bool) -> Result<(), minifb::Error> {
+        self.video
+            .render(&self.memory, self.memory.rom(), debug_enabled);
         self.video.update()
     }
 

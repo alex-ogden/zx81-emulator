@@ -127,7 +127,7 @@ fn main() {
             emulator.update_keyboard();
             // Render display
             emulator
-                .render_display()
+                .render_display(debug_enabled)
                 .unwrap_or_else(|e| eprintln!("Display error: {}", e));
 
             // Show periodic stats
