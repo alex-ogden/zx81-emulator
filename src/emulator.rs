@@ -9,6 +9,7 @@ pub struct Emulator {
     video: Video,
     io: IoController,
     cycles: u64,
+    tape_loaded: bool,
 }
 
 impl Emulator {
@@ -19,15 +20,20 @@ impl Emulator {
             video: Video::new(debug_enabled, rev_video)?,
             io: IoController::new(),
             cycles: 0,
+            tape_loaded: false,
         })
     }
 
     pub fn step(&mut self) -> u8 {
         let cycles = self.cpu.step(&mut self.memory, &mut self.io);
         self.cycles += cycles as u64;
-        // TODO: Handle video timing
-        // TODO: Handle interrupts
         cycles
+    }
+
+    pub fn load_tape(&mut self, filename: &str) -> Result<(), String> {
+        self.memory.load_tape(filename)?;
+        self.tape_loaded = true;
+        Ok(())
     }
 
     pub fn dump_system_vars(&self) {

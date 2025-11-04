@@ -8,7 +8,10 @@ fn main() {
 
     // We need a minimum of 2 args
     if args.len() < 2 {
-        eprintln!("Usage: {} <rom_file> [--debug] [--rev-video]", args[0]);
+        eprintln!(
+            "Usage: {} <rom_file> [tape_file] [--debug] [--rev-video]",
+            args[0]
+        );
         process::exit(1);
     }
 
@@ -67,6 +70,15 @@ fn main() {
             process::exit(1);
         }
     };
+
+    // Load tape file if provided
+    if args.len() > 2 {
+        if let Err(e) = emulator.load_tape(&args[2]) {
+            eprintln!("Failed to load tape: {}", e);
+        } else {
+            println!("Tape file {} loaded", args[2]);
+        }
+    }
 
     println!("Starting emulation...\n");
 

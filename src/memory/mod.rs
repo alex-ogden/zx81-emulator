@@ -1,11 +1,14 @@
 mod ram;
 mod rom;
+mod tape;
 
 pub use rom::load_rom;
+pub use tape::Tape;
 
 pub struct Memory {
     rom: Vec<u8>,
     ram: Vec<u8>,
+    tape: Option<Tape>,
 }
 
 impl Memory {
@@ -13,6 +16,25 @@ impl Memory {
         Self {
             rom,
             ram: vec![0; 0x4000], // 16K RAM
+            tape: None,
+        }
+    }
+
+    pub fn load_tape(&mut self, filename: &str) -> Result<(), String> {
+        let tape = Tape::load(filename)?;
+        self.tape = Some(tape);
+        Ok(())
+    }
+
+    pub fn has_tape(&self) -> bool {
+        self.tape.is_some()
+    }
+
+    pub fn get_tape_byte(&mut self) -> Option<u8> {
+        if let Some(tape) = &mut self.tape {
+            tape.get_next_byte()
+        } else {
+            None
         }
     }
 
