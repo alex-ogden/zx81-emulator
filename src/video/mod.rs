@@ -6,10 +6,12 @@ const ZX81_SCREEN_WIDTH: usize = 256; // Screen width
 const ZX81_SCREEN_HEIGHT: usize = 192; // Screen height
 const ZX81_SCREEN_SF: usize = 3; // Scale factor (to fit modern displays)
 const ZX81_DEBUG_PANEL_WIDTH: usize = 320;
+const ZX81_DEBUG_PANEL_HEIGHT: usize = 150;
 
 // Font data for debug text
 const FONT_WIDTH: usize = 5;
 const FONT_HEIGHT: usize = 7;
+const FONT_SCALE: usize = 2;
 
 // ZX81 Video system
 // Character-based display: 32×24 text
@@ -34,20 +36,26 @@ impl Video {
             screen_width
         };
 
+        let total_height = if debug_enabled {
+            screen_height + ZX81_DEBUG_PANEL_HEIGHT
+        } else {
+            screen_height
+        };
+
         let window = Window::new(
             "ZX81 Emulator",
             total_width,
-            screen_height,
+            total_height,
             WindowOptions::default(),
         )?;
-        let buffer = vec![0; total_width * screen_height];
+        let buffer = vec![0; total_width * total_height];
 
-        println!("Window size: {} x {}", total_width, screen_height);
+        println!("Window size: {} x {}", total_width, total_height);
         println!("Buffer size: {} pixels", buffer.len());
         if debug_enabled {
             println!(
-                "Debug panel enabled: {} pixels wide",
-                ZX81_DEBUG_PANEL_WIDTH
+                "Debug panel enabled: {} x {} pixels (w/h)",
+                ZX81_DEBUG_PANEL_HEIGHT, ZX81_DEBUG_PANEL_WIDTH
             );
         }
 
@@ -55,7 +63,7 @@ impl Video {
             window,
             buffer,
             width: total_width,
-            height: screen_height,
+            height: total_height,
             rev_video,
             debug_enabled,
         })
@@ -150,9 +158,8 @@ impl Video {
 
     fn render_debug_panel(&mut self, cpu: &Cpu, memory: &Memory) {
         let panel_x = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF;
-        let text_colour = 0xFF00FF00; // Green debug text 
+        let colour = 0xFFFFFFFF; // White debug text 
         let bg_colour = 0xFF1A1A1A; // Dark-grey background
-        let accent_colour = 0xFF00AAFF; // Light blue for headers
 
         // Fill debug panel background
         for y in 0..self.height {
@@ -168,59 +175,49 @@ impl Video {
         let x_offset = panel_x + 10;
 
         // Title header
-        self.draw_text("=== DEBUG INFO ===", x_offset, y_pos, accent_colour);
-        y_pos += 20;
+        self.draw_text("=== DEBUG INFO ===", x_offset, y_pos, colour);
+        y_pos += 20 * FONT_SCALE;
 
         // CPU registers
-        self.draw_text("REGISTERS:", x_offset, y_pos, accent_colour);
-        y_pos += 12;
+        self.draw_text("REGISTERS:", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
 
-        self.draw_text(
-            &format!("PC: 0x{:04X}", cpu.pc),
-            x_offset,
-            y_pos,
-            text_colour,
-        );
-        y_pos += 10;
-        self.draw_text(
-            &format!("SP: 0x{:04X}", cpu.sp),
-            x_offset,
-            y_pos,
-            text_colour,
-        );
-        y_pos += 10;
+        self.draw_text(&format!("PC: 0x{:04X}", cpu.pc), x_offset, y_pos, colour);
+        y_pos += 10 * FONT_SCALE;
+        self.draw_text(&format!("SP: 0x{:04X}", cpu.sp), x_offset, y_pos, colour);
+        y_pos += 10 * FONT_SCALE;
         self.draw_text(
             &format!("A: 0x{:02X}    F: {:02X}", cpu.a, cpu.f),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
-        y_pos += 10;
+        y_pos += 10 * FONT_SCALE;
         self.draw_text(
             &format!("B: 0x{:02X}    C: {:02X}", cpu.b, cpu.c),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
-        y_pos += 10;
+        y_pos += 10 * FONT_SCALE;
         self.draw_text(
             &format!("D: 0x{:02X}    E: {:02X}", cpu.d, cpu.e),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
-        y_pos += 10;
+        y_pos += 10 * FONT_SCALE;
         self.draw_text(
             &format!("H: 0x{:02X}    L: {:02X}", cpu.h, cpu.l),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
-        y_pos += 15;
+        y_pos += 15 * FONT_SCALE;
 
         // Flags
-        self.draw_text("FLAGS:", x_offset, y_pos, accent_colour);
-        y_pos += 12;
+        self.draw_text("FLAGS:", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
 
         let flags = format!(
             "S:{} Z:{} H:{} P:{} N:{} C:{}",
@@ -231,32 +228,32 @@ impl Video {
             if cpu.get_flag_n() { "1" } else { "0" },
             if cpu.get_flag_c() { "1" } else { "0" },
         );
-        self.draw_text(&flags, x_offset, y_pos, text_colour);
-        y_pos += 15;
+        self.draw_text(&flags, x_offset, y_pos, colour);
+        y_pos += 15 * FONT_SCALE;
 
         // Index Registers
-        self.draw_text("INDEX REGS:", x_offset, y_pos, accent_colour);
-        y_pos += 12;
-        self.draw_text(&format!("IX: {:04X}", cpu.ix), x_offset, y_pos, text_colour);
-        y_pos += 10;
-        self.draw_text(&format!("IY: {:04X}", cpu.iy), x_offset, y_pos, text_colour);
-        y_pos += 15;
+        self.draw_text("INDEX REGS:", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
+        self.draw_text(&format!("IX: {:04X}", cpu.ix), x_offset, y_pos, colour);
+        y_pos += 10 * FONT_SCALE;
+        self.draw_text(&format!("IY: {:04X}", cpu.iy), x_offset, y_pos, colour);
+        y_pos += 15 * FONT_SCALE;
 
         // Current Instruction
-        self.draw_text("CURRENT OPCODE:", x_offset, y_pos, accent_colour);
-        y_pos += 12;
+        self.draw_text("CURRENT OPCODE:", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
         let opcode = memory.read(cpu.pc);
         self.draw_text(
             &format!("[{:04X}]: {:02X}", cpu.pc, opcode),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
-        y_pos += 15;
+        y_pos += 15 * FONT_SCALE;
 
         // Stack preview
-        self.draw_text("STACK (top 4):", x_offset, y_pos, accent_colour);
-        y_pos += 12;
+        self.draw_text("STACK (top 4):", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
         for i in 0..4 {
             let addr = cpu.sp.wrapping_add(i * 2);
             let val = memory.read_word(addr);
@@ -264,35 +261,25 @@ impl Video {
                 &format!("[{:04X}]: {:04X}", addr, val),
                 x_offset,
                 y_pos,
-                text_colour,
+                colour,
             );
-            y_pos += 10;
+            y_pos += 10 * FONT_SCALE;
         }
-        y_pos += 5;
+        y_pos += 5 * FONT_SCALE;
 
         // ZX81 System Variables
-        self.draw_text("ZX81 SYSTEM:", x_offset, y_pos, accent_colour);
-        y_pos += 12;
+        self.draw_text("ZX81 SYSTEM:", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
         let d_file = memory.read_word(0x400C);
         let vars = memory.read_word(0x4010);
-        self.draw_text(
-            &format!("D_FILE: {:04X}", d_file),
-            x_offset,
-            y_pos,
-            text_colour,
-        );
-        y_pos += 10;
-        self.draw_text(
-            &format!("VARS:   {:04X}", vars),
-            x_offset,
-            y_pos,
-            text_colour,
-        );
-        y_pos += 15;
+        self.draw_text(&format!("D_FILE: {:04X}", d_file), x_offset, y_pos, colour);
+        y_pos += 10 * FONT_SCALE;
+        self.draw_text(&format!("VARS:   {:04X}", vars), x_offset, y_pos, colour);
+        y_pos += 15 * FONT_SCALE;
 
         // Interrupt state
-        self.draw_text("INTERRUPTS:", x_offset, y_pos, accent_colour);
-        y_pos += 12;
+        self.draw_text("INTERRUPTS:", x_offset, y_pos, colour);
+        y_pos += 12 * FONT_SCALE;
         self.draw_text(
             &format!(
                 "IFF1:{} IFF2:{} IM:{}",
@@ -302,20 +289,20 @@ impl Video {
             ),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
-        y_pos += 10;
+        y_pos += 10 * FONT_SCALE;
         self.draw_text(
             &format!("I: {:02X}  R: {:02X}", cpu.i, cpu.r),
             x_offset,
             y_pos,
-            text_colour,
+            colour,
         );
     }
 
     fn draw_text(&mut self, text: &str, x: usize, y: usize, colour: u32) {
         for (i, ch) in text.chars().enumerate() {
-            self.draw_char(ch, x + i * (FONT_WIDTH + 1), y, colour);
+            self.draw_char(ch, x + i * ((FONT_WIDTH * FONT_SCALE) + 1), y, colour);
         }
     }
 
@@ -325,11 +312,15 @@ impl Video {
         for row in 0..FONT_HEIGHT {
             for col in 0..FONT_WIDTH {
                 if (glyph[row] >> (4 - col)) & 1 != 0 {
-                    let px = x + col;
-                    let py = y * row;
-                    let index = py * self.width + px;
-                    if index < self.buffer.len() {
-                        self.buffer[index] = colour;
+                    for sy in 0..FONT_SCALE {
+                        for sx in 0..FONT_SCALE {
+                            let px = x + (col * FONT_SCALE) + sx;
+                            let py = y + (row * FONT_SCALE) + sy;
+                            let index = py * self.width + px;
+                            if index < self.buffer.len() {
+                                self.buffer[index] = colour;
+                            }
+                        }
                     }
                 }
             }

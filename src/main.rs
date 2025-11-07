@@ -125,7 +125,7 @@ fn main() {
             emulator.update_keyboard();
             // Render display
             emulator
-                .render_display(debug_enabled)
+                .render_display()
                 .unwrap_or_else(|e| eprintln!("Display error: {}", e));
         }
 
