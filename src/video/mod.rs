@@ -54,19 +54,9 @@ impl Video {
 
         // Render characters
         let mut addr = d_file_ptr + 1;
-        // !TODO: Implement better debug handling
-        if debug_enabled {
-            println!("\n======== Screen Debug ========");
-        }
         for line in 0..24 {
-            if debug_enabled {
-                print!("Line: {}: ", line);
-            }
             for col in 0..32 {
                 let char_code = memory.read(addr);
-                if debug_enabled {
-                    print!(" {:02X} ", char_code);
-                }
                 addr += 1;
 
                 if char_code == 0x76 {
@@ -76,9 +66,6 @@ impl Video {
                 self.render_character(char_code, col, line, rom);
             }
             addr += 1;
-            if debug_enabled {
-                println!();
-            }
         }
     }
 

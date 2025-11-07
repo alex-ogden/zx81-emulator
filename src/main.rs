@@ -117,11 +117,6 @@ fn main() {
             if frame_count == INIT_FRAMES {
                 println!("Initialisation complete! Start display rendering");
                 println!("Total cycles executed: {}", total_cycles);
-
-                // Dump system variables for debugging
-                if debug_enabled {
-                    emulator.dump_system_vars();
-                }
             }
 
             _frames_since_init += 1;
