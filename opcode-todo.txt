@@ -1,5 +1,0 @@
-// A file to keep track of "unknown" opcodes:
-
-Unknown FD opcode: 0xAE at PC: 0x10D6
-Unknown opcode: 0x27 at PC: 0x163E
-

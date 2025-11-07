@@ -1,7 +1,9 @@
 use std::env;
 use std::process;
 
-use zx81_emulator::{Emulator, memory::load_rom};
+use zx81_emulator::Emulator;
+use zx81_emulator::memory::load_rom;
+use zx81_emulator::tape::Tape;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -70,6 +72,12 @@ fn main() {
             process::exit(1);
         }
     };
+
+    if args.len() > 2 {
+        let p_file_path = &args[2];
+        let tape_data = Tape::new(&p_file_path);
+        emulator.load_tape(tape_data);
+    }
 
     println!("Starting emulation...\n");
 

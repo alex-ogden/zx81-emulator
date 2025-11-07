@@ -1,6 +1,7 @@
 use crate::cpu::Cpu;
 use crate::io::IoController;
 use crate::memory::Memory;
+use crate::tape::Tape;
 use crate::video::Video;
 
 pub struct Emulator {
@@ -9,6 +10,7 @@ pub struct Emulator {
     video: Video,
     io: IoController,
     cycles: u64,
+    tape_data: Option<Vec<u8>>,
 }
 
 impl Emulator {
@@ -19,7 +21,12 @@ impl Emulator {
             video: Video::new(debug_enabled, rev_video)?,
             io: IoController::new(),
             cycles: 0,
+            tape_data: Some(Vec::new()),
         })
+    }
+
+    pub fn load_tape(&mut self, tape: Tape) {
+        self.tape_data = Some(tape.data);
     }
 
     pub fn step(&mut self) -> u8 {

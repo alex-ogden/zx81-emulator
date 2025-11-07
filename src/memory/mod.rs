@@ -19,6 +19,28 @@ impl Memory {
         &self.rom
     }
 
+    pub fn load_program(&mut self, program_data: &[u8]) -> Result<(), String> {
+        let start_addr = 0x4009;
+        let new_d_file_addr = 0x4009 + program_data.len();
+        let new_vars_addr = new_d_file_addr + 2;
+
+        // Ensure program is small enough to fit in memory
+        if start_addr + program_data.len() >= 0x8000 {
+            return Err(format!("Program data is too large to fit in memory!"));
+        }
+
+        // Load program data into memory starting at 0x4009
+        for (i, byte) in program_data.iter().enumerate() {
+            self.write((start_addr + i) as u16, *byte);
+        }
+
+        // Update system variables
+        self.write_word(0x400C, new_d_file_addr as u16);
+        self.write_word(0x4010, new_vars_addr as u16);
+
+        Ok(())
+    }
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x1FFF => self.rom[addr as usize],
