@@ -1,10 +1,15 @@
+use crate::cpu::Cpu;
 use crate::memory::Memory;
 use minifb::{Window, WindowOptions};
 
 const ZX81_SCREEN_WIDTH: usize = 256; // Screen width
 const ZX81_SCREEN_HEIGHT: usize = 192; // Screen height
 const ZX81_SCREEN_SF: usize = 3; // Scale factor (to fit modern displays)
-const ZX81_DEBUG_PANEL_WIDTH: usize = 192;
+const ZX81_DEBUG_PANEL_WIDTH: usize = 320;
+
+// Font data for debug text
+const FONT_WIDTH: usize = 5;
+const FONT_HEIGHT: usize = 7;
 
 // ZX81 Video system
 // Character-based display: 32×24 text
@@ -15,42 +20,60 @@ pub struct Video {
     width: usize,
     height: usize,
     rev_video: bool,
+    debug_enabled: bool,
 }
 
 impl Video {
     pub fn new(debug_enabled: bool, rev_video: bool) -> Result<Self, minifb::Error> {
-        let width = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF;
-        let height = ZX81_SCREEN_HEIGHT * ZX81_SCREEN_SF;
+        let screen_width = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF;
+        let screen_height = ZX81_SCREEN_HEIGHT * ZX81_SCREEN_SF;
 
-        let window = Window::new("ZX81 Emulator", width, height, WindowOptions::default())?;
-        let buffer = vec![0; width * height];
+        let total_width = if debug_enabled {
+            screen_width + ZX81_DEBUG_PANEL_WIDTH
+        } else {
+            screen_width
+        };
 
+        let window = Window::new(
+            "ZX81 Emulator",
+            total_width,
+            screen_height,
+            WindowOptions::default(),
+        )?;
+        let buffer = vec![0; total_width * screen_height];
+
+        println!("Window size: {} x {}", total_width, screen_height);
+        println!("Buffer size: {} pixels", buffer.len());
         if debug_enabled {
-            println!("Window size: {} x {}", width, height);
-            println!("Buffer size: {} pixels", buffer.len());
+            println!(
+                "Debug panel enabled: {} pixels wide",
+                ZX81_DEBUG_PANEL_WIDTH
+            );
         }
 
         Ok(Self {
             window,
             buffer,
-            width,
-            height,
+            width: total_width,
+            height: screen_height,
             rev_video,
+            debug_enabled,
         })
     }
-    pub fn render(&mut self, memory: &Memory, rom: &[u8], debug_enabled: bool) {
+
+    pub fn render(&mut self, memory: &Memory, rom: &[u8], cpu: &Cpu) {
         let d_file_ptr = memory.read_word(0x400C);
 
         if d_file_ptr < 0x4000 || d_file_ptr > 0x8000 {
             return;
         }
 
-        let bg_color = if self.rev_video {
+        let bg_colour = if self.rev_video {
             0xFFFFFFFF
         } else {
             0xFF000000
         };
-        self.buffer.fill(bg_color);
+        self.buffer.fill(bg_colour);
 
         // Render characters
         let mut addr = d_file_ptr + 1;
@@ -66,6 +89,11 @@ impl Video {
                 self.render_character(char_code, col, line, rom);
             }
             addr += 1;
+        }
+
+        // Render debug panel if required
+        if self.debug_enabled {
+            self.render_debug_panel(cpu, memory);
         }
     }
 
@@ -120,6 +148,194 @@ impl Video {
         }
     }
 
+    fn render_debug_panel(&mut self, cpu: &Cpu, memory: &Memory) {
+        let panel_x = ZX81_SCREEN_WIDTH * ZX81_SCREEN_SF;
+        let text_colour = 0xFF00FF00; // Green debug text 
+        let bg_colour = 0xFF1A1A1A; // Dark-grey background
+        let accent_colour = 0xFF00AAFF; // Light blue for headers
+
+        // Fill debug panel background
+        for y in 0..self.height {
+            for x in panel_x..self.width {
+                let index = y * self.width + x;
+                if index < self.buffer.len() {
+                    self.buffer[index] = bg_colour;
+                }
+            }
+        }
+
+        let mut y_pos = 10;
+        let x_offset = panel_x + 10;
+
+        // Title header
+        self.draw_text("=== DEBUG INFO ===", x_offset, y_pos, accent_colour);
+        y_pos += 20;
+
+        // CPU registers
+        self.draw_text("REGISTERS:", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+
+        self.draw_text(
+            &format!("PC: 0x{:04X}", cpu.pc),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("SP: 0x{:04X}", cpu.sp),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("A: 0x{:02X}    F: {:02X}", cpu.a, cpu.f),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("B: 0x{:02X}    C: {:02X}", cpu.b, cpu.c),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("D: 0x{:02X}    E: {:02X}", cpu.d, cpu.e),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("H: 0x{:02X}    L: {:02X}", cpu.h, cpu.l),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 15;
+
+        // Flags
+        self.draw_text("FLAGS:", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+
+        let flags = format!(
+            "S:{} Z:{} H:{} P:{} N:{} C:{}",
+            if cpu.get_flag_s() { "1" } else { "0" },
+            if cpu.get_flag_z() { "1" } else { "0" },
+            if cpu.get_flag_h() { "1" } else { "0" },
+            if cpu.get_flag_pv() { "1" } else { "0" },
+            if cpu.get_flag_n() { "1" } else { "0" },
+            if cpu.get_flag_c() { "1" } else { "0" },
+        );
+        self.draw_text(&flags, x_offset, y_pos, text_colour);
+        y_pos += 15;
+
+        // Index Registers
+        self.draw_text("INDEX REGS:", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+        self.draw_text(&format!("IX: {:04X}", cpu.ix), x_offset, y_pos, text_colour);
+        y_pos += 10;
+        self.draw_text(&format!("IY: {:04X}", cpu.iy), x_offset, y_pos, text_colour);
+        y_pos += 15;
+
+        // Current Instruction
+        self.draw_text("CURRENT OPCODE:", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+        let opcode = memory.read(cpu.pc);
+        self.draw_text(
+            &format!("[{:04X}]: {:02X}", cpu.pc, opcode),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 15;
+
+        // Stack preview
+        self.draw_text("STACK (top 4):", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+        for i in 0..4 {
+            let addr = cpu.sp.wrapping_add(i * 2);
+            let val = memory.read_word(addr);
+            self.draw_text(
+                &format!("[{:04X}]: {:04X}", addr, val),
+                x_offset,
+                y_pos,
+                text_colour,
+            );
+            y_pos += 10;
+        }
+        y_pos += 5;
+
+        // ZX81 System Variables
+        self.draw_text("ZX81 SYSTEM:", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+        let d_file = memory.read_word(0x400C);
+        let vars = memory.read_word(0x4010);
+        self.draw_text(
+            &format!("D_FILE: {:04X}", d_file),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("VARS:   {:04X}", vars),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 15;
+
+        // Interrupt state
+        self.draw_text("INTERRUPTS:", x_offset, y_pos, accent_colour);
+        y_pos += 12;
+        self.draw_text(
+            &format!(
+                "IFF1:{} IFF2:{} IM:{}",
+                if cpu.iff1 { "1" } else { "0" },
+                if cpu.iff2 { "1" } else { "0" },
+                cpu.interrupt_mode
+            ),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+        y_pos += 10;
+        self.draw_text(
+            &format!("I: {:02X}  R: {:02X}", cpu.i, cpu.r),
+            x_offset,
+            y_pos,
+            text_colour,
+        );
+    }
+
+    fn draw_text(&mut self, text: &str, x: usize, y: usize, colour: u32) {
+        for (i, ch) in text.chars().enumerate() {
+            self.draw_char(ch, x + i * (FONT_WIDTH + 1), y, colour);
+        }
+    }
+
+    fn draw_char(&mut self, ch: char, x: usize, y: usize, colour: u32) {
+        let glyph = get_font_glyph(ch);
+
+        for row in 0..FONT_HEIGHT {
+            for col in 0..FONT_WIDTH {
+                if (glyph[row] >> (4 - col)) & 1 != 0 {
+                    let px = x + col;
+                    let py = y * row;
+                    let index = py * self.width + px;
+                    if index < self.buffer.len() {
+                        self.buffer[index] = colour;
+                    }
+                }
+            }
+        }
+    }
+
     pub fn update(&mut self) -> Result<(), minifb::Error> {
         self.window
             .update_with_buffer(&self.buffer, self.width, self.height)?;
@@ -132,5 +348,56 @@ impl Video {
 
     pub fn get_keys(&self) -> Vec<minifb::Key> {
         self.window.get_keys()
+    }
+}
+
+// Font set for ASCII chars
+fn get_font_glyph(ch: char) -> [u8; 7] {
+    match ch {
+        ' ' => [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+        '=' => [0x00, 0x00, 0x1F, 0x00, 0x1F, 0x00, 0x00],
+        '-' => [0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00],
+        ':' => [0x00, 0x00, 0x0C, 0x00, 0x0C, 0x00, 0x00],
+        '(' => [0x00, 0x04, 0x08, 0x08, 0x08, 0x04, 0x00],
+        ')' => [0x00, 0x08, 0x04, 0x04, 0x04, 0x08, 0x00],
+        '[' => [0x00, 0x0E, 0x08, 0x08, 0x08, 0x0E, 0x00],
+        ']' => [0x00, 0x0E, 0x02, 0x02, 0x02, 0x0E, 0x00],
+        '0' => [0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E],
+        '1' => [0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E],
+        '2' => [0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F],
+        '3' => [0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E],
+        '4' => [0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02],
+        '5' => [0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E],
+        '6' => [0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E],
+        '7' => [0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08],
+        '8' => [0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E],
+        '9' => [0x0E, 0x11, 0x11, 0x0F, 0x01, 0x02, 0x0C],
+        'A' => [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11],
+        'B' => [0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E],
+        'C' => [0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E],
+        'D' => [0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E],
+        'E' => [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F],
+        'F' => [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10],
+        'G' => [0x0E, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0F],
+        'H' => [0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11],
+        'I' => [0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E],
+        'J' => [0x07, 0x02, 0x02, 0x02, 0x02, 0x12, 0x0C],
+        'K' => [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11],
+        'L' => [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F],
+        'M' => [0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11],
+        'N' => [0x11, 0x11, 0x19, 0x15, 0x13, 0x11, 0x11],
+        'O' => [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E],
+        'P' => [0x1E, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10],
+        'Q' => [0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D],
+        'R' => [0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11],
+        'S' => [0x0F, 0x10, 0x10, 0x0E, 0x01, 0x01, 0x1E],
+        'T' => [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
+        'U' => [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E],
+        'V' => [0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04],
+        'W' => [0x11, 0x11, 0x11, 0x15, 0x15, 0x1B, 0x11],
+        'X' => [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11],
+        'Y' => [0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04],
+        'Z' => [0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F],
+        _ => [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
     }
 }
