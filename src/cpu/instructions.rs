@@ -98,14 +98,6 @@ impl Cpu {
             0xD9 => self.exx(),
             0xE3 => self.ex_sp_hl(memory),
             0xF9 => self.ld_sp_hl(),
-            _ => {
-                eprintln!(
-                    "Unknown opcode: 0x{:02X} at PC: 0x{:04X}",
-                    opcode,
-                    self.pc - 1
-                );
-                4
-            }
         }
     }
     fn nop(&mut self) -> u8 {

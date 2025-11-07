@@ -9,7 +9,7 @@ fn main() {
     // We need a minimum of 2 args
     if args.len() < 2 {
         eprintln!(
-            "Usage: {} <rom_file> [tape_file] [--debug] [--rev-video]",
+            "Usage: {} <rom_file> [--debug] [--video-debug] [--rev-video]",
             args[0]
         );
         process::exit(1);
@@ -71,15 +71,6 @@ fn main() {
         }
     };
 
-    // Load tape file if provided
-    if args.len() > 2 {
-        if let Err(e) = emulator.load_tape(&args[2]) {
-            eprintln!("Failed to load tape: {}", e);
-        } else {
-            println!("Tape file {} loaded", args[2]);
-        }
-    }
-
     println!("Starting emulation...\n");
 
     const CYCLES_PER_FRAME: u64 = 65000; // ~3.25MHz / 50Hz
@@ -87,7 +78,7 @@ fn main() {
 
     let mut total_cycles = 0u64;
     let mut frame_count = 0u32;
-    let mut frames_since_init = 0u32;
+    let mut _frames_since_init = 0u32;
 
     while emulator.is_window_open() {
         let target_cycles = total_cycles + CYCLES_PER_FRAME;
@@ -133,7 +124,7 @@ fn main() {
                 }
             }
 
-            frames_since_init += 1;
+            _frames_since_init += 1;
 
             // Get keyboard input
             emulator.update_keyboard();
@@ -141,11 +132,6 @@ fn main() {
             emulator
                 .render_display(debug_enabled)
                 .unwrap_or_else(|e| eprintln!("Display error: {}", e));
-
-            // Show periodic stats
-            if debug_enabled && frames_since_init % 5 == 0 {
-                println!("Frame: {}, Total cycles: {}", frame_count, total_cycles);
-            }
         }
 
         // Maintain ~50Hz refresh rate (ZX81 standard)
