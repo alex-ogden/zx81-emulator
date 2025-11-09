@@ -76,7 +76,7 @@ fn main() {
     if args.len() > 2 {
         let p_file_path = &args[2];
         let tape_data = Tape::new(&p_file_path);
-        emulator.load_tape(tape_data);
+        emulator.load_tape(tape_data)
     }
 
     println!("Starting emulation...\n");
@@ -131,6 +131,26 @@ fn main() {
 
             // Get keyboard input
             emulator.update_keyboard();
+
+            let keys = emulator.video().get_keys();
+            // Check for cassette play
+            if keys.contains(&minifb::Key::F5) {
+                if let Some(t) = &mut emulator.tape {
+                    if !t.is_playing() {
+                        t.start_playing();
+                    }
+                }
+            }
+            // Check for cassette stop
+            if keys.contains(&minifb::Key::F6) {
+                if let Some(t) = &mut emulator.tape {
+                    t.playing = false;
+                    t.current_index = 0;
+                    t.remaining = 0;
+                    println!("Tape stopped");
+                }
+            }
+
             // Render display
             emulator
                 .render_display()

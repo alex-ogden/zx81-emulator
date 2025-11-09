@@ -19,24 +19,34 @@ impl Memory {
         &self.rom
     }
 
-    pub fn load_program(&mut self, program_data: &[u8]) -> Result<(), String> {
-        let start_addr = 0x4009;
-        let new_d_file_addr = 0x4009 + program_data.len();
-        let new_vars_addr = new_d_file_addr + 2;
-
-        // Ensure program is small enough to fit in memory
-        if start_addr + program_data.len() >= 0x8000 {
-            return Err(format!("Program data is too large to fit in memory!"));
+    pub fn load_program(&mut self, data: &[u8]) -> Result<(), String> {
+        if data.is_empty() {
+            return Err("Empty .p file".to_string());
         }
 
-        // Load program data into memory starting at 0x4009
-        for (i, byte) in program_data.iter().enumerate() {
-            self.write((start_addr + i) as u16, *byte);
+        // Preserve 0x4000–0x4011
+        let mut saved = [0u8; 18];
+        for i in 0..18 {
+            saved[i] = self.read(0x4000 + i as u16);
         }
 
-        // Update system variables
-        self.write_word(0x400C, new_d_file_addr as u16);
-        self.write_word(0x4010, new_vars_addr as u16);
+        // Load from 0x4009
+        for (i, &byte) in data.iter().enumerate() {
+            let addr = 0x4009 + i as u16;
+            if addr >= 0x8000 {
+                break;
+            }
+            self.write(addr, byte);
+        }
+
+        // Restore sysvars
+        for i in 0..18 {
+            self.write(0x4000 + i as u16, saved[i]);
+        }
+
+        // Set STKEND
+        let end = 0x4009 + data.len() as u16;
+        self.write_word(0x401F, end);
 
         Ok(())
     }

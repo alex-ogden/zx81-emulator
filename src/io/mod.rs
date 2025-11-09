@@ -1,3 +1,5 @@
+use crate::tape::Tape;
+
 pub struct IoController {
     keyboard_state: [[bool; 5]; 8],
 }
@@ -9,9 +11,9 @@ impl IoController {
         }
     }
 
-    pub fn read_port(&self, port: u8, addr_high: u8) -> u8 {
+    pub fn read_port(&self, port: u8, addr_high: u8, tape: &Option<Tape>) -> u8 {
         if port == 0xFE {
-            let mut result = 0xFF;
+            let mut result = 0xBF;
 
             let row = match addr_high {
                 0xFE => 0,
@@ -22,7 +24,7 @@ impl IoController {
                 0xDF => 5,
                 0xBF => 6,
                 0x7F => 7,
-                _ => return 0xFF,
+                _ => return 0xBF,
             };
 
             for col in 0..5 {
@@ -31,9 +33,21 @@ impl IoController {
                 }
             }
 
+            // EAR bit 6 from tape
+            let ear = if let Some(t) = tape {
+                if t.is_playing() {
+                    if t.get_level() { 0 } else { 1 }
+                } else {
+                    1 // Floating low when no tape playing 
+                }
+            } else {
+                1 // No tape loaded, floating low 
+            };
+
+            result = (result & 0xBF) | (ear << 6); // Set bit 5 if high 
             result
         } else {
-            0xFF
+            0xBF
         }
     }
 

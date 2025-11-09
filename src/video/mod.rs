@@ -85,19 +85,23 @@ impl Video {
 
         // Render characters
         let mut addr = d_file_ptr + 1;
+        // println!("\n===================================================\n");
         for line in 0..24 {
+            // print!("Line {}: ", line);
             for col in 0..32 {
                 let char_code = memory.read(addr);
                 addr += 1;
+                // print!(" {:02X}", char_code);
 
                 if char_code == 0x76 {
                     break;
                 }
-
                 self.render_character(char_code, col, line, rom);
             }
+            // println!();
             addr += 1;
         }
+        // println!("\n===================================================\n");
 
         // Render debug panel if required
         if self.debug_enabled {

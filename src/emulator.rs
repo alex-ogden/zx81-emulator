@@ -10,7 +10,7 @@ pub struct Emulator {
     video: Video,
     io: IoController,
     cycles: u64,
-    tape_data: Option<Vec<u8>>,
+    pub tape: Option<Tape>,
 }
 
 impl Emulator {
@@ -21,16 +21,20 @@ impl Emulator {
             video: Video::new(debug_enabled, rev_video)?,
             io: IoController::new(),
             cycles: 0,
-            tape_data: Some(Vec::new()),
+            tape: None,
         })
     }
 
     pub fn load_tape(&mut self, tape: Tape) {
-        self.tape_data = Some(tape.data);
+        self.tape = Some(tape);
     }
 
     pub fn step(&mut self) -> u8 {
-        let cycles = self.cpu.step(&mut self.memory, &mut self.io);
+        let tape_ref = &self.tape;
+        let cycles = self.cpu.step(&mut self.memory, &mut self.io, tape_ref);
+        if let Some(t) = &mut self.tape {
+            t.advance(cycles as u64);
+        }
         self.cycles += cycles as u64;
         cycles
     }
@@ -58,6 +62,14 @@ impl Emulator {
 
     pub fn cpu(&self) -> &Cpu {
         &self.cpu
+    }
+
+    pub fn cpu_mut(&mut self) -> &mut Cpu {
+        &mut self.cpu
+    }
+
+    pub fn video(&self) -> &Video {
+        &self.video
     }
 
     pub fn is_halted(&self) -> bool {

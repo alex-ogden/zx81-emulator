@@ -1,6 +1,7 @@
 use super::Cpu;
 use crate::io::IoController;
 use crate::memory::Memory;
+use crate::tape::Tape;
 
 // Further implementation of Cpu with opcode functions
 impl Cpu {
@@ -9,12 +10,13 @@ impl Cpu {
         opcode: u8,
         memory: &mut Memory,
         io: &mut IoController,
+        tape: &Option<Tape>,
     ) -> u8 {
         match opcode {
             // ED-prefixed instructions
             0xED => {
                 let sub_opcode = self.fetch_byte(memory);
-                self.execute_ed_instruction(sub_opcode, memory, io)
+                self.execute_ed_instruction(sub_opcode, memory, io, tape)
             }
             // CB-prefixed instructions
             0xCB => {
@@ -90,7 +92,7 @@ impl Cpu {
             0xF3 => self.di(),
             0xFB => self.ei(),
             0xD3 => self.out_n_a(memory, io),
-            0xDB => self.in_a_n(memory, io),
+            0xDB => self.in_a_n(memory, io, tape),
             0xC7 | 0xCF | 0xD7 | 0xDF | 0xE7 | 0xEF | 0xF7 | 0xFF => self.rst_nn(opcode, memory),
             0x09 | 0x19 | 0x29 | 0x39 => self.add_hl_rr(opcode),
             0xEB => self.ex_de_hl(),
@@ -291,9 +293,9 @@ impl Cpu {
         io.write_port(port, self.a);
         11
     }
-    fn in_a_n(&mut self, memory: &Memory, io: &mut IoController) -> u8 {
+    fn in_a_n(&mut self, memory: &Memory, io: &mut IoController, tape: &Option<Tape>) -> u8 {
         let port = self.fetch_byte(memory);
-        self.a = io.read_port(port, self.a);
+        self.a = io.read_port(port, self.a, tape);
         11
     }
     fn ld_rr_indirect_a(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
