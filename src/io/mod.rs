@@ -33,18 +33,20 @@ impl IoController {
                 }
             }
 
-            // EAR bit 6 from tape
-            let ear = if let Some(t) = tape {
+            // EAR bit (bit 7) from tape
+            // On real ZX81, bit 7 is HIGH (0x80) when tape signal is present
+            // and LOW (0x00) during silence
+            let ear_bit = if let Some(t) = tape {
                 if t.is_playing() {
-                    if t.get_level() { 0 } else { 1 }
+                    if t.get_level() { 0x80 } else { 0x00 }
                 } else {
-                    1 // Floating low when no tape playing 
+                    0x00 // Low when not playing
                 }
             } else {
-                1 // No tape loaded, floating low 
+                0x00 // Low when no tape loaded
             };
 
-            result = (result & 0xBF) | (ear << 6); // Set bit 5 if high 
+            result = (result & 0x7F) | ear_bit; // Set bit 7 based on tape signal
             result
         } else {
             0xBF

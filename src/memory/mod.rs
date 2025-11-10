@@ -8,10 +8,44 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(rom: Vec<u8>) -> Self {
+    pub fn new(mut rom: Vec<u8>) -> Self {
+        // Patch the ROM with load/save hooks
+        Self::patch_zx81_hooks(&mut rom);
+
         Self {
             rom,
             ram: vec![0; 0x4000], // 16K RAM
+        }
+    }
+
+    fn patch_zx81_hooks(rom: &mut Vec<u8>) {
+        // Patch LOAD routine at 0x347
+        // Original ROM code will be replaced with:
+        // 0x347: EB        - EX DE,HL (save HL in DE)
+        // 0x348: ED FC     - Custom LOAD hook
+        // 0x34A: C3 07 02  - JP 0x0207 (back to ROM)
+        if rom.len() > 0x34C {
+            rom[0x347] = 0xEB;  // EX DE,HL
+            rom[0x348] = 0xED;  // ED prefix
+            rom[0x349] = 0xFC;  // LOAD hook opcode
+            rom[0x34A] = 0xC3;  // JP
+            rom[0x34B] = 0x07;
+            rom[0x34C] = 0x02;  // to 0x0207
+
+            println!("ROM: Patched LOAD routine at 0x0347");
+        }
+
+        // Patch SAVE routine at 0x2FC
+        // 0x2FC: ED FD     - Custom SAVE hook
+        // 0x2FE: C3 07 02  - JP 0x0207
+        if rom.len() > 0x300 {
+            rom[0x2FC] = 0xED;  // ED prefix
+            rom[0x2FD] = 0xFD;  // SAVE hook opcode
+            rom[0x2FE] = 0xC3;  // JP
+            rom[0x2FF] = 0x07;
+            rom[0x300] = 0x02;  // to 0x0207
+
+            println!("ROM: Patched SAVE routine at 0x02FC");
         }
     }
 

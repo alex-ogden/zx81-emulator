@@ -2,7 +2,7 @@ use std::fs;
 use std::process;
 
 const CLOCK_HZ: u64 = 3_250_000;
-const LEADER_SEC: u64 = 5;
+const LEADER_SEC: u64 = 2; // Reduced from 5 for testing
 const LEADER_T: u64 = LEADER_SEC * CLOCK_HZ;
 const PULSE_HIGH_T: u64 = 488;
 const PULSE_LOW_T: u64 = 487;
@@ -48,11 +48,13 @@ impl Tape {
 
     fn generate_pulses(data: &Vec<u8>) -> Vec<(bool, u64)> {
         let mut pulses = Vec::new();
-        pulses.push((false, LEADER_T)); // Long intro silence, low 
+        pulses.push((false, LEADER_T)); // Long intro silence, low
 
-        // Add sync pulses after leader
-        pulses.push((true, PULSE_HIGH_T));
-        pulses.push((false, PULSE_LOW_T * 2));
+        // Add 4 sync pulses after leader (this is what the ROM expects)
+        for _ in 0..4 {
+            pulses.push((true, PULSE_HIGH_T));
+            pulses.push((false, PULSE_LOW_T));
+        }
 
         // Add dummy name: Single inverse character (0xA6) to signal end-of-name
         let dummy_name: Vec<u8> = vec![0xA6];
@@ -123,13 +125,6 @@ impl Tape {
             }
             self.level = self.pulses[self.current_index].0;
             self.remaining = self.pulses[self.current_index].1;
-            // Debug for visibility
-            if self.current_index % 100 == 0 {
-                println!(
-                    "Tape progress: index={}, level={}, remaining={}",
-                    self.current_index, self.level, self.remaining
-                );
-            }
         }
     }
 
@@ -159,5 +154,5 @@ fn load_p_file(path: &str) -> Result<Vec<u8>, String> {
     println!("INFO: P file size: {}", tape_data.len());
     println!("INFO: Program data size: {}", program_data.len());
 
-    Ok(tape_data)
+    Ok(program_data)
 }
