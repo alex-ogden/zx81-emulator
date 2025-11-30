@@ -1,4 +1,5 @@
 use super::Cpu;
+use crate::io::IoController;
 use crate::memory::Memory;
 use crate::tape::Tape;
 
@@ -7,7 +8,7 @@ impl Cpu {
         &mut self,
         opcode: u8,
         memory: &mut Memory,
-        io: &mut crate::io::IoController,
+        io: &mut IoController,
         tape: &Option<Tape>,
     ) -> u8 {
         match opcode {
@@ -299,46 +300,11 @@ impl Cpu {
             }
             println!();
 
-            // Find D_FILE by looking for a run of consecutive 0x76 bytes (collapsed display)
-            // A collapsed display has 24+ consecutive newlines
-            let mut addr = start_addr;
-            let mut d_file = start_addr;
-            let mut consecutive_76 = 0;
-
-            while addr < end {
-                if memory.read(addr) == 0x76 {
-                    consecutive_76 += 1;
-                    if consecutive_76 >= 24 {
-                        // Found the display file! It starts where the run began
-                        d_file = addr - 23;
-                        println!("Found D_FILE at 0x{:04X} (24+ consecutive 0x76 bytes)", d_file);
-                        break;
-                    }
-                } else {
-                    consecutive_76 = 0;
-                }
-                addr = addr.wrapping_add(1);
-            }
-
-            if d_file == start_addr {
-                println!("WARNING: Could not find D_FILE! Using default location");
-                d_file = end.wrapping_sub(32); // Guess: last 32 bytes
-            }
-
-            // E_LINE is just before D_FILE
-            let e_line = if d_file > start_addr { d_file.wrapping_sub(1) } else { start_addr };
-
-            // Find VARS by continuing through the display file
-            // Count 24-25 newlines for the full display
-            let mut newline_count = 0;
-            addr = d_file;
-            while addr < end && newline_count < 25 {
-                if memory.read(addr) == 0x76 {
-                    newline_count += 1;
-                }
-                addr = addr.wrapping_add(1);
-            }
-            let vars = addr;
+            // Set D_FILE to the standard location at the end of RAM
+            let d_file = 0x7508; // Standard D_FILE location for 16K RAM
+            let e_line = d_file - 1;
+            let vars = d_file + 792; // 24 lines * 33 bytes
+            let e_line = vars - 1;
 
             // Set all the system variables
             memory.write_word(0x4014, e_line);      // E_LINE
@@ -346,22 +312,41 @@ impl Cpu {
             memory.write_word(0x4010, vars);        // VARS
 
             // Set other important system variables
-            memory.write_word(0x4016, vars);        // CH_ADD? Not sure
-            memory.write_word(0x401A, end);         // STKBOT (bottom of stack)
-            memory.write_word(0x401C, end);         // STKEND (end of stack)
+            memory.write_word(0x4016, vars);        // CH_ADD?
+            memory.write_word(0x401A, vars);        // STKBOT
+            memory.write_word(0x401C, 0x8000);        // STKEND
+
+            // Fill display with message in ZX81 character codes
+            let message = vec![
+                0x25, 0x26, 0x22, 0x1C, 0x26, 0x16, 0x20, 0x00, // PROGRAM 
+                0x1B, 0x22, 0x16, 0x1C, 0x1E, 0x1C, 0x00, 0x37, // LOADED -
+                0x00, 0x29, 0x32, 0x25, 0x1E, 0x00, 0x1B, 0x18, //  TYPE L
+                0x27, 0x29, 0x00, 0x29, 0x22, 0x00, 0x2B, 0x18, // ST TO V
+                0x1E, 0x2C, // EW
+            ];
+            let mut addr = d_file;
+            for &byte in message.iter() {
+                memory.write(addr, byte);
+                addr += 1;
+            }
+            for _ in addr..d_file + 792 {
+                memory.write(addr, 0x00);
+                addr += 1;
+            }
+
+            // Set newlines
+            for line in 0..24 {
+                let newline_pos = d_file + line * 33 + 32;
+                if newline_pos < d_file + 792 {
+                    memory.write(newline_pos, 0x76);
+                }
+            }
 
             println!("System variables set:");
             println!("  E_LINE  = 0x{:04X}", e_line);
             println!("  D_FILE  = 0x{:04X}", d_file);
             println!("  VARS    = 0x{:04X}", vars);
-            println!("  STKEND  = 0x{:04X}", end);
-
-            // Show what's at D_FILE
-            print!("D_FILE contents (first 32 bytes): ");
-            for i in 0..32 {
-                print!("{:02X} ", memory.read(d_file + i));
-            }
-            println!();
+            println!("  STKEND  = 0x{:04X}", 0x8000);
 
             // Clear carry flag to indicate success
             self.set_flag_c(false);

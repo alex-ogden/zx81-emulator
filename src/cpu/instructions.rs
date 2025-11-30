@@ -108,6 +108,7 @@ impl Cpu {
     }
     fn halt(&mut self) -> u8 {
         self.is_halted = true;
+        println!("=== HALTED ===");
         4
     }
     fn di(&mut self) -> u8 {
@@ -129,8 +130,8 @@ impl Cpu {
         self.set_flag_c(bit7 == 1);
         self.set_flag_n(false);
         self.set_flag_h(false);
-        self.set_flag_x((result & 0x20) != 0);
-        self.set_flag_y((result & 0x08) != 0);
+        self.set_flag_y((result & 0x20) != 0);
+        self.set_flag_x((result & 0x08) != 0);
 
         4
     }
@@ -142,8 +143,8 @@ impl Cpu {
         self.set_flag_c(bit7 == 1);
         self.set_flag_n(false);
         self.set_flag_h(false);
-        self.set_flag_x((result & 0x20) != 0);
-        self.set_flag_y((result & 0x08) != 0);
+        self.set_flag_y((result & 0x20) != 0);
+        self.set_flag_x((result & 0x08) != 0);
 
         4
     }
@@ -156,8 +157,8 @@ impl Cpu {
         self.set_flag_c(bit0 == 1);
         self.set_flag_n(false);
         self.set_flag_h(false);
-        self.set_flag_x((result & 0x20) != 0);
-        self.set_flag_y((result & 0x08) != 0);
+        self.set_flag_y((result & 0x20) != 0);
+        self.set_flag_x((result & 0x08) != 0);
 
         4
     }
@@ -169,8 +170,8 @@ impl Cpu {
         self.set_flag_c(bit0 == 1);
         self.set_flag_n(false);
         self.set_flag_h(false);
-        self.set_flag_x((result & 0x20) != 0);
-        self.set_flag_y((result & 0x08) != 0);
+        self.set_flag_y((result & 0x20) != 0);
+        self.set_flag_x((result & 0x08) != 0);
 
         4
     }
@@ -204,10 +205,10 @@ impl Cpu {
         self.set_flag_s((self.a & 0x80) != 0);
         self.set_flag_z(self.a == 0);
         self.set_flag_h((correction & 0x06) != 0);
-        self.set_flag_pv(self.a.count_ones() % 2 == 0);
+        // DAA does not affect PV flag
         self.set_flag_c(carry);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         4
     }
@@ -216,8 +217,8 @@ impl Cpu {
         self.a = !self.a;
         self.set_flag_n(true);
         self.set_flag_h(true);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
         4
     }
     fn ex_de_hl(&mut self) -> u8 {
@@ -277,8 +278,8 @@ impl Cpu {
         self.set_flag_c(intermediate_res > 0xFFFF);
         self.set_flag_n(false);
         self.set_flag_h(((old_val & 0x0FFF) + (src_reg & 0x0FFF)) > 0x0FFF);
-        self.set_flag_x((self.h & 0x20) != 0);
-        self.set_flag_y((self.h & 0x08) != 0);
+        self.set_flag_y((self.h & 0x20) != 0);
+        self.set_flag_x((self.h & 0x08) != 0);
 
         11
     }
@@ -348,8 +349,8 @@ impl Cpu {
         self.set_flag_h(true);
         self.set_flag_z(self.a == 0);
         self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -365,8 +366,8 @@ impl Cpu {
         self.set_flag_h(false);
         self.set_flag_z(self.a == 0);
         self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -382,8 +383,8 @@ impl Cpu {
         self.set_flag_h(false);
         self.set_flag_z(self.a == 0);
         self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -399,8 +400,8 @@ impl Cpu {
         self.set_flag_h((self.a & 0x0F) < (src & 0x0F));
         self.set_flag_z(self.a == src);
         self.set_flag_s((result & 0x80) != 0);
-        self.set_flag_x((result & 0x20) != 0);
-        self.set_flag_y((result & 0x08) != 0);
+        self.set_flag_y((result & 0x20) != 0);
+        self.set_flag_x((result & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -527,8 +528,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) == 0x0F);
         self.set_flag_pv(old_val == 0x7F);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         4
     }
@@ -553,8 +554,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) == 0x0F);
         self.set_flag_pv(old_val == 0x7F);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         11
     }
@@ -579,8 +580,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) == 0x00);
         self.set_flag_pv(old_val == 0x80);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         4
     }
@@ -605,8 +606,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) == 0x00);
         self.set_flag_pv(old_val == 0x80);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         11
     }
@@ -677,8 +678,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) + (val & 0x0F) > 0x0F);
         self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         // Reg->Reg takes 4 cycles
         // Memory->Reg takes 7 cycles
@@ -702,8 +703,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) + (val & 0x0F) + carry > 0x0F);
         self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -720,8 +721,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) < (val & 0x0F));
         self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -743,8 +744,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) < (val & 0x0F) + carry);
         self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         if src_code == 6 { 7 } else { 4 }
     }
@@ -752,8 +753,8 @@ impl Cpu {
         self.set_flag_c(true);
         self.set_flag_n(false);
         self.set_flag_h(false);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
         4
     }
     fn ccf(&mut self) -> u8 {
@@ -761,8 +762,8 @@ impl Cpu {
         self.set_flag_h(old_carry);
         self.set_flag_c(!old_carry);
         self.set_flag_n(false);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
         4
     }
     fn add_a_n(&mut self, memory: &Memory) -> u8 {
@@ -777,8 +778,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) + (val & 0x0F) > 0x0F);
         self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         7
     }
@@ -799,8 +800,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) + (val & 0x0F) + carry > 0x0F);
         self.set_flag_pv(((old_val ^ new_val) & (val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         7
     }
@@ -816,8 +817,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) < (val & 0x0F));
         self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         7
     }
@@ -838,8 +839,8 @@ impl Cpu {
         self.set_flag_s((new_val & 0x80) != 0);
         self.set_flag_h((old_val & 0x0F) < (val & 0x0F) + carry);
         self.set_flag_pv(((old_val ^ val) & (old_val ^ new_val) & 0x80) != 0);
-        self.set_flag_x((new_val & 0x20) != 0);
-        self.set_flag_y((new_val & 0x08) != 0);
+        self.set_flag_y((new_val & 0x20) != 0);
+        self.set_flag_x((new_val & 0x08) != 0);
 
         7
     }
@@ -853,8 +854,8 @@ impl Cpu {
         self.set_flag_h(true);
         self.set_flag_z(self.a == 0);
         self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         7
     }
@@ -868,8 +869,8 @@ impl Cpu {
         self.set_flag_h(false);
         self.set_flag_z(self.a == 0);
         self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         7
     }
@@ -883,8 +884,8 @@ impl Cpu {
         self.set_flag_h(false);
         self.set_flag_z(self.a == 0);
         self.set_flag_s((self.a & 0x80) != 0);
-        self.set_flag_x((self.a & 0x20) != 0);
-        self.set_flag_y((self.a & 0x08) != 0);
+        self.set_flag_y((self.a & 0x20) != 0);
+        self.set_flag_x((self.a & 0x08) != 0);
 
         7
     }
@@ -898,8 +899,8 @@ impl Cpu {
         self.set_flag_h((self.a & 0x0F) < (val & 0x0F));
         self.set_flag_z(self.a == val);
         self.set_flag_s((result & 0x80) != 0);
-        self.set_flag_x((result & 0x20) != 0);
-        self.set_flag_y((result & 0x08) != 0);
+        self.set_flag_y((result & 0x20) != 0);
+        self.set_flag_x((result & 0x08) != 0);
 
         7
     }

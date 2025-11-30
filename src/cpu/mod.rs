@@ -1,3 +1,4 @@
+use crate::io::IoController;
 use crate::memory::Memory;
 use crate::tape::Tape;
 
@@ -86,9 +87,12 @@ impl Cpu {
     pub fn step(
         &mut self,
         memory: &mut Memory,
-        io: &mut crate::io::IoController,
+        io: &mut IoController,
         tape: &Option<Tape>,
     ) -> u8 {
+        // Increment refresh register (R) on each M1 cycle
+        self.r = (self.r + 1) & 0x7F;
+
         // Is the system halted?
         if self.is_halted {
             // For now just return 4 cycles
@@ -105,7 +109,7 @@ impl Cpu {
         &mut self,
         opcode: u8,
         memory: &mut Memory,
-        io: &mut crate::io::IoController,
+        io: &mut IoController,
         tape: &Option<Tape>,
     ) -> u8 {
         self.execute_instruction(opcode, memory, io, tape)

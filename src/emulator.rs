@@ -30,8 +30,7 @@ impl Emulator {
     }
 
     pub fn step(&mut self) -> u8 {
-        let tape_ref = &self.tape;
-        let cycles = self.cpu.step(&mut self.memory, &mut self.io, tape_ref);
+        let cycles = self.cpu.step(&mut self.memory, &mut self.io, &self.tape);
         if let Some(t) = &mut self.tape {
             t.advance(cycles as u64);
         }
